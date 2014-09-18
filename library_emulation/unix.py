@@ -20,7 +20,6 @@ from termcolor import colored
 from smt import boolean as bl
 from smt import bitvector as bv
 
-from concolica import global_state
 from concolica.utils import *
 
 # unistd.h
@@ -36,8 +35,8 @@ def sleep(s, cc):
     return f.ret(value=0)
 
 
-def register_hooks(cc):
-    h = global_state.function_hooks
+def register_hooks(s, cc):
+    h = s.function_hooks
 
     def register_hook(name, hook):
         h[name] = functools.partial(hook, cc=cc)

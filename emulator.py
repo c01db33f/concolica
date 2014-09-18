@@ -22,15 +22,14 @@ import reil.x86.translator as x86
 
 import smt.bitvector as bv
 
-from concolica import global_state
 from concolica.utils import *
 
 
 def operand_value(s, o):
     output = o
-    if isinstance(o, pyreil.ImmediateOperand):
+    if isinstance(o, reil.ImmediateOperand):
         output = bv.Constant(o.size, o.value)
-    elif isinstance(o, pyreil.RegisterOperand):
+    elif isinstance(o, reil.RegisterOperand):
         output = s.registers[o.name]
         if output.size > o.size:
             output = output.extract(o.size)
@@ -576,7 +575,7 @@ def fetch_instruction(s, x86_64=False):
 
         for i in range(0, 128):
             try:
-                bytes.append(s.memory[ip + i])
+                bytes.append(s.memory.read_byte(s, ip + i))
             except:
                 break
 
@@ -611,10 +610,10 @@ def single_step(s, x86_64=False):
         hc = hit_count[i.address] = 1
 
     #print ''
-    if i.address in global_state.symbols:
-        symbol = global_state.symbols[i.address]
-        if global_state.symbols[i.address] in global_state.function_hooks:
-            ss = global_state.function_hooks[symbol](s)
+    if i.address in s.symbols:
+        symbol = s.symbols[i.address]
+        if s.symbols[i.address] in s.function_hooks:
+            ss = s.function_hooks[symbol](s)
             for s in ss:
                 #s.solver.check()
                 s.clear_il_state()

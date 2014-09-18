@@ -33,28 +33,61 @@ import smt.boolean as bl
 
 class Registers(dict):
 
-    __slots__ = ('_depth', '_parent')
+    __slots__ = ('_registers', '_parent')
+
+    def __init__(self, parent=None):
+        self._registers = dict()
+        self._parent = parent
+        if self.depth() > 8:
+            self.flatten()
 
 
-    def __init__(self, parent):
-        dict.__init__(self)
-        self._depth = parent._depth + 1
-        if self._depth > 8:
-            self._parent = parent._parent
-            self.update(self._parent.items())
-        else:
-            self._parent = parent
+    def __getstate__(self):
+        self.flatten()
+        return self._registers
 
 
-    def __contains__(self, item):
-        if dict.__contains__(self, item):
-            return True
-
-        return item in self._parent
+    def __setstate__(self, dict):
+        self._registers = dict
+        self._parent = None
 
 
-    def __missing__(self, key):
-        return self._parent[key]
+    def clear_il_state(self):
+
+        # TODO: this is *insanely* lazy and inefficient
+
+        il_register_re = re.compile('t\d+')
+        for r in self._registers:
+            if il_register_re.match(r):
+                del self._registers[r]
+
+
+    def depth(self):
+        d = 0
+        p = self._parent
+
+        while p is not None:
+            d += 1
+            p = p._parent
+
+        return d
+
+
+    def flatten(self):
+        cs = []
+        p = self._parent
+
+        while p is not None:
+            cs.append(p._cache)
+            p = p._parent
+
+        cs.reverse()
+
+        for c in cs:
+            self._cache.update(c)
+
+        self._parent = p
+
 
 
 class State(object):
@@ -73,6 +106,10 @@ class State(object):
             self.registers = Registers(parent.registers)
             self.call_stack = copy.copy(parent.call_stack)
 
+            self.function_hooks = parent.function_hooks
+            self.kernel = parent.kernel
+            self.symbols = parent.symbols
+
             self.solver = smt.Solver(parent.solver)
             self.files = copy.deepcopy(parent.files)
 
@@ -81,11 +118,21 @@ class State(object):
             self.il_index = 0
 
             self.memory = None
-            self.registers = None
+            self.registers = Registers()
             self.call_stack = []
 
+            self.function_hooks = dict()
+            self.kernel = None
+            self.symbols = dict()
+
+            self.symbols = None
             self.solver = smt.Solver()
             self.files = []
+
+
+    def clear_il_state(self):
+        self.registers.clear_il_state()
+        self.il_index = 0
 
 
     def fork(self):
@@ -113,9 +160,9 @@ class State(object):
                     v = None
                     for i in range(0, size // 8):
                         if v is None:
-                            v = self.memory[a.value + i]
+                            v = self.memory.read_byte(self, a.value + i)
                         else:
-                            v = self.memory[a.value + i].concatenate(v)
+                            v = self.memory.read_byte(self, a.value + i).concatenate(v)
 
                     if e is None:
                         e = (address == a) & (value == v)
@@ -124,10 +171,10 @@ class State(object):
 
                 self.solver.add(e)
             else:
-                value = self.memory[as_[0].value]
+                value = self.memory.read_byte(self, as_[0].value)
 
                 for i in range(1, size // 8):
-                    value = self.memory[as_[0].value + i].concatenate(value)
+                    value = self.memory.read_byte(self, as_[0].value + i).concatenate(value)
         except KeyError:
             raise InvalidRead(self, address)
 
@@ -147,13 +194,13 @@ class State(object):
         if len(as_) > 1:
             for a in as_:
                 for i, byte in enumerate(bytes):
-                    self.memory[a.value + i] = smt.bv.IfThenElse(
+                    self.memory.write_byte(self, a.value + i, smt.bv.IfThenElse(
                             a != address,
-                            self.memory[a.value + i],
-                            byte)
+                            self.memory.read_byte(self, a.value + i),
+                            byte))
         else:
             for i, byte in enumerate(bytes):
-                self.memory[as_[0].value + i] = byte
+                self.memory.write_byte(self, as_[0].value + i, byte)
 
 
     def branch(self, address):
@@ -184,3 +231,7 @@ class State(object):
                 ss.append(self)
 
         return ss
+
+
+    def throw(self, exception):
+        raise exception

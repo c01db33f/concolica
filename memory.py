@@ -79,16 +79,22 @@ class DynamicMemory(object):
 
     __slots__ = ('_cache', '_parent')
 
+
     def __init__(self, parent):
         self._cache = dict()
         self._parent = parent
-        if self._depth > 8:
+        if self.depth() > 8:
             self.flatten()
 
 
     def __getstate__(self):
         self.flatten()
-        return self.__dict__
+        return (self._cache, self._parent)
+
+
+    def __setstate__(self, dict):
+        self._cache = dict[0]
+        self._parent = dict[1]
 
 
     def depth(self):
@@ -138,7 +144,7 @@ class DynamicMemory(object):
 
     def write_byte(self, state, address, value):
 
-        if self.is_mapped(self, state, address):
+        if self.is_mapped(state, address):
             self._cache[address] = value
 
         else:

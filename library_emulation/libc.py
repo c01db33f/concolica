@@ -20,8 +20,8 @@ from termcolor import colored
 from smt import boolean as bl
 from smt import bitvector as bv
 
-from concolica import global_state
 from concolica.utils import *
+
 
 # stdio.h
 
@@ -406,8 +406,8 @@ def memcmp(s, cc):
     return f.ret(value=result)
 
 
-def register_hooks(cc):
-    h = global_state.function_hooks
+def register_hooks(s, cc):
+    h = s.function_hooks
 
     def register_hook(name, hook):
         h[name] = functools.partial(hook, cc=cc)

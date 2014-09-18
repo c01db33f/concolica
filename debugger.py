@@ -33,7 +33,6 @@ import subprocess
 from termcolor import colored
 
 from concolica import memory
-from concolica import global_state
 from concolica import state
 
 from smt import bitvector as bv
@@ -48,11 +47,11 @@ class VdbProcess(object):
     def _load_memory(self):
         global_memory = memory.StaticMemory()
 
-        maps = trace.getMemoryMaps()
+        maps = self._t.getMemoryMaps()
 
         for base, size, perm, name in maps:
             try:
-                bytes = trace.readMemory(base, size)
+                bytes = self._t.readMemory(base, size)
                 global_memory.add_mapping(base, bytes)
             except:
                 pass
@@ -63,12 +62,12 @@ class VdbProcess(object):
     def _load_symbols(self):
         symbols = dict()
 
-        trace._findLibraryMaps('\x7fELF')
+        self._t._findLibraryMaps('\x7fELF')
 
-        for lib_name in trace.getNormalizedLibNames():
+        for lib_name in self._t.getNormalizedLibNames():
             if lib_name == '[vdso]':
                 continue
-            for sym in trace.getSymsForFile(lib_name):
+            for sym in self._t.getSymsForFile(lib_name):
                 if len(sym.name) == 0:
                     continue
                 if sym.value not in symbols or len(sym.name) < len(symbols[sym.value]):
@@ -76,10 +75,15 @@ class VdbProcess(object):
 
         return symbols
 
+    def _load_registers(self, state):
+        raise NotImplementedError()
+
     def state(self):
         s = state.State()
         s.memory = self._load_memory()
         s.symbols = self._load_symbols()
+        self._load_registers(s)
+        return s
 
 
 class VdbX86Process(VdbProcess):
@@ -219,68 +223,43 @@ class VdbX86_64Process(VdbProcess):
         state.registers['gsbase'] = bv.Constant(64, self._get_gsbase())
 
 
-def concolic(trace):
-    try:
-        x86_64 = True
+def get_state(program, breakpoint, x86_64=False):
 
-        if x86_64:
-            global_state.kernel = linux.LinuxX64()
-            libc.register_hooks(cc=Amd64SysV)
-            unix.register_hooks(cc=Amd64SysV)
-            register_custom_hooks(cc=Amd64SysV)
-        else:
-            global_state.kernel = linux.LinuxX86()
-            libc.register_hooks(cc=Cdecl)
-            unix.register_hooks(cc=Cdecl)
-            register_custom_hooks(cc=Cdecl)
-
-        s = state.State()
-
-        load_memory(trace)
-        load_registers(trace, s, x86_64)
-        load_symbols(trace)
-
-        states = [s]
-        coverage = CoverageScoringFunction()
-
-        run_threaded(states, x86_64)
-    except:
-        traceback.print_exc()
-
-
-class Tracepoint(vtrace.Breakpoint):
-    def __init__(self, address, name):
-        vtrace.Breakpoint.__init__(self, address)
-        self.name = name
-
-    def notify(self, event, trace):
-        print '[*] reached {}, starting concolic execution'.format(self.name)
-        concolic(trace)
-        raise ValueError()
-
-
-tracepoints = {
-    0x400a6f:'main'
-}
-
-
-def debugger_state(program, breakpoint, x86_64=True):
-
-
-if __name__ == '__main__':
+    state = None
     trace = vtrace.getTrace()
 
     print '[*] starting process'
 
-    trace.execute('/home/user/research/vorbis')
+    trace.execute(program)
+
+    class Tracepoint(vtrace.Breakpoint):
+
+        def __init__(self):
+            vtrace.Breakpoint.__init__(self, breakpoint)
+
+        def notify(self, event, trace):
+            print '[*] asdf'
+            if x86_64:
+                p = VdbX86_64Process(trace)
+            else:
+                p = VdbX86Process(trace)
+
+            print '[*] reached breakpoint, dumping state'
+            state = p.state()
+
+            while True:
+                pass
+
+            raise ValueError()
+
+    trace.addBreakpoint(Tracepoint())
 
     print '[*] debugger attached'
-
-    for tp in tracepoints:
-        trace.addBreakpoint(Tracepoint(tp, tracepoints[tp]))
 
     try:
         trace.run()
     except ValueError:
         trace.kill()
+
+    return state
 
