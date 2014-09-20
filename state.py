@@ -42,6 +42,10 @@ class Registers(dict):
             self.flatten()
 
 
+    def dirty(self):
+        return len(self._registers) > 0
+
+
     def __getstate__(self):
         self.flatten()
         return self._registers
@@ -50,6 +54,17 @@ class Registers(dict):
     def __setstate__(self, dict):
         self._registers = dict
         self._parent = None
+
+    def __contains__(self, item):
+        if dict.__contains__(self, item):
+            return True
+
+        return item in self._parent
+
+
+    def __missing__(self, key):
+        return self._parent[key]
+
 
 
     def clear_il_state(self):
@@ -78,13 +93,13 @@ class Registers(dict):
         p = self._parent
 
         while p is not None:
-            cs.append(p._cache)
+            cs.append(p._registers)
             p = p._parent
 
         cs.reverse()
 
         for c in cs:
-            self._cache.update(c)
+            self._registers.update(c)
 
         self._parent = p
 
@@ -127,7 +142,25 @@ class State(object):
 
             self.symbols = None
             self.solver = smt.Solver()
-            self.files = []
+            self.files = [
+            {
+                'path':'stdin',
+                'mode':'r',
+                'offset':0,
+                'bytes':[]
+            },
+            {
+                'path':'stdout',
+                'mode':'w',
+                'offset':0,
+                'bytes':[]
+            },
+            {
+                'path':'stderr',
+                'mode':'w',
+                'offset':0,
+                'bytes':[]
+            }]
 
 
     def clear_il_state(self):
@@ -137,13 +170,14 @@ class State(object):
 
     def fork(self):
         new = None
-        if self.registers.dirty or self.memory.dirty:
+        if self.registers.dirty() or self.memory.dirty():
             # we are substantively different to parent
             new = State(self)
         else:
             new = State(self.parent)
             new.ip = self.ip
             new.il_index = self.il_index
+        return new
 
 
     def read(self, address, size):

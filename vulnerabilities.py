@@ -75,7 +75,7 @@ class InvalidRead(InvalidMemoryAccess):
 
 
     def __str__(self):
-        return '{} {:x} invalid read: {}'.format(
+        return '{} {:x} invalid read: {:x}'.format(
             self.state.id, self.state.ip, self.address)
 
 
@@ -86,7 +86,7 @@ class UninitialisedRead(InvalidRead):
 
 
     def __str__(self):
-        return '{} {:x} uninitialised read: {}'.format(
+        return '{} {:x} uninitialised read: {:x}'.format(
             self.state.id, self.state.ip, self.address)
 
 

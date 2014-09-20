@@ -26,6 +26,17 @@ from concolica.library_emulation import libc
 from concolica.library_emulation import unix
 from concolica.syscall_emulation import linux
 
+# 0x1000
+# 0x1000
+# 0x238
+# 0x1
+# 0x1
+# 0x4000
+# 0x1000
+# 0x2000
+# 0x1800
+
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -36,12 +47,14 @@ if __name__ == '__main__':
     state = serialisation.load(args.file)
 
     x86_64 = False
-    if args.arch == 'x86':
+    if 'rax' in state.registers:
+        x86_64 = True
+
+    if not x86_64:
         state.kernel = linux.LinuxX86()
         libc.register_hooks(state, calling_conventions.Cdecl)
         unix.register_hooks(state, calling_conventions.Cdecl)
     else:
-        x86_64 = True
         state.kernel = linux.LinuxX64()
         libc.register_hooks(state, calling_conventions.Amd64SysV)
         unix.register_hooks(state, calling_conventions.Amd64SysV)
@@ -49,5 +62,5 @@ if __name__ == '__main__':
     #import pdb
     #pdb.set_trace()
 
-    threaded.run_threaded([state], x86_64)
+    threaded.run_single_threaded([state], x86_64)
 

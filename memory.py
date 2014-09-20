@@ -77,24 +77,62 @@ class DynamicMemory(object):
     memory written to during emulation.
     """
 
-    __slots__ = ('_cache', '_parent')
+    __slots__ = ('_cache', '_parent', '_heap_next', '_heap_blocks', '_heap_free')
 
 
     def __init__(self, parent):
         self._cache = dict()
         self._parent = parent
+
+        if isinstance(parent, StaticMemory):
+            self._heap_next = 0x80000000
+            self._heap_blocks = dict()
+            self._heap_free = dict()
+        else:
+            self._heap_next = parent._heap_next
+            self._heap_blocks = dict(parent._heap_blocks)
+            self._heap_free = dict(parent._heap_free)
+
         if self.depth() > 8:
             self.flatten()
 
 
+    def dirty(self):
+        return len(self._cache) > 0
+
+
     def __getstate__(self):
         self.flatten()
-        return (self._cache, self._parent)
+        return (self._cache, self._parent, self._heap_next, self._heap_blocks, self._heap_free)
 
 
     def __setstate__(self, dict):
         self._cache = dict[0]
         self._parent = dict[1]
+        self._heap_next = dict[2]
+        self._heap_blocks = dict[3]
+        self._heap_free = dict[4]
+
+
+    def allocate(self, state, size):
+
+        # TODO: we need to write in 'uninitialised memory blocks'
+        # this way we can distinguish boring and interesting use
+        # of uninitialised heap
+
+        ptr = self._heap_next
+        self._heap_blocks[ptr] = size
+        self._heap_next += ((size // 0x1000) + 1) * 0x1000
+        return ptr
+
+
+    def free(self, state, ptr):
+        size = self._heap_blocks[ptr]
+        for i in range(0, size):
+            byte = bv.Symbol(8, 'free_{:x}_{:x}'.format(ptr, i))
+            self.write_byte(state, ptr + i, byte)
+        self._heap_free[ptr] = size
+        del self._heap_blocks[ptr]
 
 
     def depth(self):
@@ -129,8 +167,11 @@ class DynamicMemory(object):
         if address in self._cache:
             return True
 
-        else:
-            return self._parent.is_mapped(state, address)
+        for block in self._heap_blocks:
+            if block <= address < block + self._heap_blocks[block]:
+                return True
+
+        return self._parent.is_mapped(state, address)
 
 
     def read_byte(self, state, address):

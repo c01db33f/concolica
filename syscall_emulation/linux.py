@@ -29,7 +29,7 @@ def sys_brk(s, cc):
         s.id, f.return_address(), brk))
 
     if brk.value == 0:
-        ptr = s.memory.allocate(bv.Constant(32, 0x10000))
+        ptr = s.memory.allocate(0x10000)
 
     return f.ret(value=ptr)
 
@@ -171,8 +171,7 @@ def sys_mmap(s, cc):
         s.id, f.return_address(), addr, length, prot, flags, fd, offset))
 
     if length.symbolic:
-        print 'symbolic length not supported'
-        return []
+        raise NotImplementedError()
 
     ptr = bv.Constant(addr.size, s.memory.allocate(length))
 
@@ -288,11 +287,11 @@ def sys_write(s, cc):
     return function.ret(value=bv.Constant(size.size, o.index))
 
 
-def sys_unknown(s, cc):
+def sys_unknown(s, number, cc):
     function = cc(s)
 
     print '{} {} sys_unknown({})'.format(
-        s.id, function.return_address(), s.registers['eax'])
+        s.id, function.return_address(), number)
 
     return []
 
@@ -323,7 +322,7 @@ class LinuxX86(object):
             if eax.value in self.syscall_table:
                 return self.syscall_table[eax.value](s, cc=cc)
             else:
-                return sys_unknown(s, cc=cc)
+                return sys_unknown(s, eax.value, cc=cc)
 
 
 class LinuxX86Int0x80(object):
@@ -374,6 +373,7 @@ class LinuxX86Int0x80(object):
                 self.state.registers['eax'] = value
 
         return self.state.branch(return_address)
+
 
 class LinuxX86Sysenter(object):
 
@@ -450,7 +450,7 @@ class LinuxX64(object):
             if rax.value in self.syscall_table:
                 return self.syscall_table[rax.value](s, cc=LinuxX64Syscall)
             else:
-                return sys_unknown(s, cc=LinuxX64Syscall)
+                return sys_unknown(s, rax.value, cc=LinuxX64Syscall)
 
 
 class LinuxX64Syscall(object):

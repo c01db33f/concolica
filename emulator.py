@@ -610,6 +610,7 @@ def single_step(s, x86_64=False):
         hc = hit_count[i.address] = 1
 
     #print ''
+
     if i.address in s.symbols:
         symbol = s.symbols[i.address]
         if s.symbols[i.address] in s.function_hooks:
@@ -621,7 +622,7 @@ def single_step(s, x86_64=False):
         else:
             print colored('{} calling {}'.format(s.id, symbol), 'green')
 
-    print colored(register_dump(s, x86_64), 'blue')
+    #print colored(register_dump(s, x86_64), 'blue')
     print colored('{} {:4} {}'.format(s.id, hc, i), 'yellow')
 
     max_il_index = len(i.il_instructions)
@@ -641,9 +642,9 @@ def single_step(s, x86_64=False):
         ri = i.il_instructions[s.il_index]
         s.il_index += 1
 
-        print ''
-        print colored(reil_register_dump(s, ri), 'magenta')
-        print colored('{:2} {}'.format(s.il_index-1, ri), 'magenta')
+        #print ''
+        #print colored(reil_register_dump(s, ri), 'magenta')
+        #print colored('{:2} {}'.format(s.il_index-1, ri), 'magenta')
 
         states += reil_single_step(ri, s)
 

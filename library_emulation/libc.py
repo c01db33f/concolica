@@ -52,10 +52,10 @@ def fopen(s, cc):
     o.append_string(String(s, mode))
     mode = o.string
 
-    print('{} {} fopen(path="{}", mode="{}");'.format(
-        s.id, f.return_address(), path, mode))
-
     file_id = len(s.files)
+
+    print('{} {} fopen(path="{}", mode="{}"); [{}]'.format(
+        s.id, f.return_address(), path, mode, file_id))
 
     s.files.append({
         'path':path,
@@ -63,8 +63,6 @@ def fopen(s, cc):
         'offset':0,
         'bytes':[]
     })
-
-    print ('stream id: {}'.format(file_id))
 
     return f.ret(value=file_id)
 
@@ -214,11 +212,18 @@ def calloc(s, cc):
     f = cc(s)
 
     size = f.params[0]
+    count = f.params[1]
 
-    ptr = s.memory.allocate(size)
+    if size.symbolic or count.symbolic:
+        raise NotImplementedError()
+    else:
+        ptr = s.memory.allocate(s, size.value * count.value)
+        zero = bv.Constant(8, 0)
+        for i in range(0, size.value * count.value):
+            s.memory.write_byte(s, ptr + i, zero)
 
-    print('{} {} calloc(size={}); [{:x}]'.format(
-        s.id, f.return_address(), size, ptr))
+    print('{} {} calloc(size={}, count={}); [{:x}]'.format(
+        s.id, f.return_address(), size, count, ptr))
 
     return f.ret(value=ptr)
 
@@ -234,12 +239,31 @@ def exit(s, cc):
     return []
 
 
+def free(s, cc):
+    f = cc(s)
+
+    ptr = f.params[0]
+
+    if ptr.symbolic:
+        raise NotImplementedError()
+    else:
+        s.memory.free(s, ptr.value)
+
+    print('{} {} free(ptr={})'.format(
+        s.id, f.return_address(), ptr))
+
+    return f.ret(value=0)
+
+
 def malloc(s, cc):
     f = cc(s)
 
     size = f.params[0]
 
-    ptr = s.memory.allocate(size)
+    if size.symbolic:
+        raise NotImplementedError()
+    else:
+        ptr = s.memory.allocate(s, size.value)
 
     print('{} {} malloc(size={}); [{:x}]'.format(
         s.id, f.return_address(), size, ptr))
@@ -424,6 +448,7 @@ def register_hooks(s, cc):
     # stdlib.h
     register_hook('calloc', calloc)
     register_hook('exit', exit)
+    register_hook('free', free)
     register_hook('malloc', malloc)
 
     # string.h
