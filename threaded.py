@@ -1,3 +1,18 @@
+# -*- coding: utf-8 -*-
+
+#    Copyright 2014 Mark Brand - c01db33f (at) gmail.com
+#
+#    Licensed under the Apache License, Version 2.0 (the "License");
+#    you may not use this file except in compliance with the License.
+#    You may obtain a copy of the License at
+#
+#        http://www.apache.org/licenses/LICENSE-2.0
+#
+#    Unless required by applicable law or agreed to in writing, software
+#    distributed under the License is distributed on an "AS IS" BASIS,
+#    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#    See the License for the specific language governing permissions and
+#    limitations under the License.
 
 
 import threading
@@ -5,6 +20,7 @@ import threading
 import argparse
 import functools
 import os
+import random
 import shlex
 import struct
 import subprocess
@@ -13,8 +29,9 @@ import time
 from termcolor import colored
 
 from concolica import emulator
-from concolica import state
 from concolica import interlocked
+from concolica import serialisation
+from concolica import state
 from concolica.vulnerabilities import *
 
 
@@ -30,7 +47,7 @@ def run_single_threaded(initial_states, x86_64):
 
     while len(states) > 0:
         try:
-            s = states.pop()
+            s = states.pop(random.randint(0, len(states) - 1))
             ns = emulator.single_step(s, x86_64)
             for n in ns:
                 states.append(n)
@@ -60,6 +77,8 @@ def run_threaded(initial_states, x86_64):
                         available_states.release()
                 except StateException, v:
                     print v
+                    print 'saving vuln state {}'.format(v.state.id)
+                    serialisation.save('vuln_state_{}'.format(v.state.id), v)
 
             active_threads.release()
             time.sleep(1.0)

@@ -98,7 +98,7 @@ class DynamicMemory(object):
 
 
     def dirty(self):
-        return len(self._cache) > 0
+        return self.depth() == 0 or len(self._cache) > 0
 
 
     def __getstate__(self):

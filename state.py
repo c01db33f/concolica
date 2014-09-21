@@ -36,45 +36,52 @@ class Registers(dict):
     __slots__ = ('_registers', '_parent')
 
     def __init__(self, parent=None):
-        self._registers = dict()
+        #self._registers = dict()
         self._parent = parent
-        if self.depth() > 8:
+        if self.depth() > 2:
             self.flatten()
 
 
     def dirty(self):
-        return len(self._registers) > 0
+        return self.depth() == 0 or len(self) > 0 #._registers) > 0
 
 
     def __getstate__(self):
         self.flatten()
-        return self._registers
+        return dict(self) #._registers
 
 
     def __setstate__(self, dict):
-        self._registers = dict
+        self.update(dict)
         self._parent = None
+
 
     def __contains__(self, item):
         if dict.__contains__(self, item):
             return True
 
-        return item in self._parent
+        if self._parent is not None:
+            return item in self._parent
+
+        return False
 
 
     def __missing__(self, key):
-        return self._parent[key]
+        if self._parent is None:
+            print 'missing the badger: {}'.format(key)
+            raise KeyError()
 
+        return self._parent[key]
 
 
     def clear_il_state(self):
 
         # TODO: this is *insanely* lazy and inefficient
 
-        il_register_re = re.compile('t\d+')
-        for r in self._registers:
+        il_register_re = re.compile('^t\d+$')
+        for r in self.keys(): #._registers:
             if il_register_re.match(r):
-                del self._registers[r]
+                del self[r] #._registers[r]
 
 
     def depth(self):
@@ -93,13 +100,18 @@ class Registers(dict):
         p = self._parent
 
         while p is not None:
-            cs.append(p._registers)
+            cs.append(p) #._registers)
             p = p._parent
 
         cs.reverse()
 
+
+        #print 'flattening'
+        #print cs
         for c in cs:
-            self._registers.update(c)
+            self.update(c) #._registers.update(c)
+
+        #print self.keys() #_registers.keys()
 
         self._parent = p
 
@@ -127,7 +139,7 @@ class State(object):
 
             self.solver = smt.Solver(parent.solver)
             self.files = copy.deepcopy(parent.files)
-
+            self.trace = list(parent.trace)
         else:
             self.ip = 0
             self.il_index = 0
@@ -161,6 +173,7 @@ class State(object):
                 'offset':0,
                 'bytes':[]
             }]
+            self.trace = []
 
 
     def clear_il_state(self):
@@ -170,13 +183,13 @@ class State(object):
 
     def fork(self):
         new = None
-        if self.registers.dirty() or self.memory.dirty():
+        #if self.registers.dirty() or self.memory.dirty():
             # we are substantively different to parent
-            new = State(self)
-        else:
-            new = State(self.parent)
-            new.ip = self.ip
-            new.il_index = self.il_index
+        new = State(self)
+        #else:
+        #    new = State(self.parent)
+        #    new.ip = self.ip
+        #    new.il_index = self.il_index
         return new
 
 

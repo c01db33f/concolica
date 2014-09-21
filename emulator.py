@@ -569,6 +569,7 @@ def register_dump(s, x86_64=False):
 _translation_cache = dict()
 def fetch_instruction(s, x86_64=False):
     ip = s.ip
+    s.trace.append(ip)
 
     if ip not in _translation_cache:
         bytes = []
@@ -609,7 +610,8 @@ def single_step(s, x86_64=False):
     else:
         hc = hit_count[i.address] = 1
 
-    #print ''
+    step_output = ''
+    step_output += '\n'
 
     if i.address in s.symbols:
         symbol = s.symbols[i.address]
@@ -620,10 +622,10 @@ def single_step(s, x86_64=False):
                 s.clear_il_state()
             return ss
         else:
-            print colored('{} calling {}'.format(s.id, symbol), 'green')
+            step_output += colored('{} calling {}'.format(s.id, symbol), 'green') + '\n'
 
-    #print colored(register_dump(s, x86_64), 'blue')
-    print colored('{} {:4} {}'.format(s.id, hc, i), 'yellow')
+    #step_output += colored(register_dump(s, x86_64), 'blue')
+    step_output += colored('{} {:4} {}'.format(s.id, hc, i), 'yellow') + '\n'
 
     max_il_index = len(i.il_instructions)
 
@@ -642,10 +644,15 @@ def single_step(s, x86_64=False):
         ri = i.il_instructions[s.il_index]
         s.il_index += 1
 
-        #print ''
-        #print colored(reil_register_dump(s, ri), 'magenta')
-        #print colored('{:2} {}'.format(s.il_index-1, ri), 'magenta')
+        #step_output += '\n'
+        #step_output += colored(reil_register_dump(s, ri), 'magenta') + '\n'
+        step_output += colored('{} {:2} {}'.format(s.id, s.il_index-1, ri), 'magenta') + '\n'
 
-        states += reil_single_step(ri, s)
+        try:
+            states += reil_single_step(ri, s)
+        except KeyError:
+            print 'THIS FUCKER\n' + step_output
+
+    print step_output
 
     return exit_states
