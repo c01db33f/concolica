@@ -124,6 +124,7 @@ class State(object):
     def __init__(self, parent=None):
         self.id = State._state_id.increment()
         self.parent = parent
+        self.score = 0
 
         if parent:
             self.ip = parent.ip

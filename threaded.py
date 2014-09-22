@@ -55,7 +55,7 @@ def run_single_threaded(initial_states, x86_64):
             print v
 
 
-def run_threaded(initial_states, x86_64):
+def run_threaded(initial_states, x86_64, scoring_function=None):
     global active_threads
     global available_states
 
@@ -73,10 +73,16 @@ def run_threaded(initial_states, x86_64):
                     s = states.pop()
                     ns = emulator.single_step(s, x86_64)
                     for n in ns:
-                        states.append(n)
+                        if scoring_function is not None:
+                            n.score = scoring_function(n)
+                            states.append(n)
+                            states.sort(key=lambda x:x.score)
+                        else:
+                            states.append(n)
+
                         available_states.release()
                 except StateException, v:
-                    print v
+                    print colored(v, 'white', 'on_red', attrs=['bold'])
                     print 'saving vuln state {}'.format(v.state.id)
                     serialisation.save('vuln_state_{}'.format(v.state.id), v)
 
