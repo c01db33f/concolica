@@ -646,12 +646,9 @@ def single_step(s, x86_64=False):
 
         #step_output += '\n'
         #step_output += colored(reil_register_dump(s, ri), 'magenta') + '\n'
-        step_output += colored('{} {:2} {}'.format(s.id, s.il_index-1, ri), 'magenta') + '\n'
+        #step_output += colored('{} {:2} {}'.format(s.id, s.il_index-1, ri), 'magenta') + '\n'
 
-        try:
-            states += reil_single_step(ri, s)
-        except KeyError:
-            print 'THIS FUCKER\n' + step_output
+        states += reil_single_step(ri, s)
 
     print step_output.rstrip('\n')
 
