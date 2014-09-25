@@ -582,9 +582,6 @@ def fetch_instruction(s, x86_64=False):
 
         bytes = ''.join(map(lambda x:chr(x.value), bytes))
         for i in x86.translate(bytes, ip, x86_64):
-            if 'xor' in str(i):
-                for il_instruction in i.il_instructions:
-                    print il_instruction
             _translation_cache[i.address] = i
 
     if ip not in _translation_cache:
@@ -649,7 +646,7 @@ def single_step(s, x86_64=False):
 
         #step_output += '\n'
         #step_output += colored(reil_register_dump(s, ri), 'magenta') + '\n'
-        #step_output += colored('{} {:2} {}'.format(s.id, s.il_index-1, ri), 'magenta') + '\n'
+        step_output += colored('{} {:2} {}'.format(s.id, s.il_index-1, ri), 'magenta') + '\n'
 
         try:
             states += reil_single_step(ri, s)
