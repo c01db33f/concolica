@@ -49,12 +49,29 @@ def sys_chdir(s, cc):
     return f.ret(value='sys_chdir')
 
 
+def sys_close(s, cc):
+    f = cc(s)
+
+    fd = f.params[0]
+
+    print('{} {} sys_close({})'.format(
+        s.id, f.return_address(), fd))
+
+    if fd.symbolic:
+        raise NotImplementedError()
+    else:
+        s.files.pop(fd.value - 1)
+
+    return f.ret(value='sys_close')
+
+
 def sys_exit(s, cc):
     f = cc(s)
 
     arg0 = f.params[0]
 
-    print('{} {} sys_exit({})'.format(s.id, f.return_address(), arg0))
+    print('{} {} sys_exit({})'.format(
+        s.id, f.return_address(), arg0))
 
     return []
 
@@ -64,9 +81,59 @@ def sys_exit_group(s, cc):
 
     arg0 = f.params[0]
 
-    print('{} {} sys_exit_group({})'.format(s.id, f.return_address(), arg0))
+    print('{} {} sys_exit_group({})'.format(
+        s.id, f.return_address(), arg0))
 
     return []
+
+
+def sys_fcntl(s, cc):
+    f = cc(s)
+
+    fd = f.params[0]
+    cmd = f.params[1]
+
+    if cmd.value == 0:
+        cmd = 'F_DUPFD'
+    elif cmd.value == 1:
+        cmd = 'F_GETFD'
+    elif cmd.value == 2:
+        cmd = 'F_SETFD'
+    elif cmd.value == 3:
+        cmd = 'F_GETFL'
+    elif cmd.value == 4:
+        cmd = 'F_SETFL'
+    elif cmd.value == 5:
+        cmd = 'F_GETLK'
+    elif cmd.value == 6:
+        cmd = 'F_SETLK'
+    elif cmd.value == 7:
+        cmd = 'F_SETLKW'
+    elif cmd.value == 8:
+        cmd = 'F_SETOWN'
+    elif cmd.value == 9:
+        cmd = 'F_GETOWN'
+    elif cmd.value == 10:
+        cmd = 'F_SETSIG'
+    elif cmd.value == 11:
+        cmd = 'F_GETSIG'
+    elif cmd.value == 12:
+        cmd = 'F_GETLK64'
+    elif cmd.value == 13:
+        cmd = 'F_SETLK64'
+    elif cmd.value == 14:
+        cmd = 'F_SETLKW64'
+    elif cmd.value == 15:
+        cmd = 'F_SETOWN_EX'
+    elif cmd.value == 16:
+        cmd = 'F_GETOWN_EX'
+    elif cmd.value == 17:
+        cmd = 'F_GETOWNER_UIDS'
+
+    print('{} {} sys_fcntl(fd={}, cmd={}, ...)'.format(
+        s.id, f.return_address(), fd, cmd))
+
+    return f.ret(value='sys_fcntl')
 
 
 def sys_fstat(s, cc):
@@ -432,9 +499,11 @@ class LinuxX64(object):
     syscall_table = {
         0x01:  sys_exit,
         0x02:  sys_open,
+        0x03:  sys_close,
         0x05:  sys_fstat,
         0x08:  sys_lseek,
         0x09:  sys_mmap,
+        0x48:  sys_fcntl,
         12: sys_brk,
         16: sys_ioctl,
         101:sys_ptrace,

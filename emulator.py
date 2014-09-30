@@ -624,7 +624,7 @@ def single_step(s, x86_64=False):
         else:
             step_output += colored('{} calling {}'.format(s.id, symbol), 'green') + '\n'
 
-    #step_output += colored(register_dump(s, x86_64), 'blue')
+    step_output += colored(register_dump(s, x86_64), 'blue') + '\n'
     step_output += colored('{} {:4} {}'.format(s.id, hc, i), 'yellow') + '\n'
 
     max_il_index = len(i.il_instructions)
@@ -644,12 +644,13 @@ def single_step(s, x86_64=False):
         ri = i.il_instructions[s.il_index]
         s.il_index += 1
 
-        #step_output += '\n'
-        #step_output += colored(reil_register_dump(s, ri), 'magenta') + '\n'
-        #step_output += colored('{} {:2} {}'.format(s.id, s.il_index-1, ri), 'magenta') + '\n'
+        step_output += '\n'
+        step_output += colored(reil_register_dump(s, ri), 'magenta') + '\n'
+        step_output += colored('{} {:2} {}'.format(s.id, s.il_index-1, ri), 'magenta') + '\n'
 
         states += reil_single_step(ri, s)
 
-    print step_output.rstrip('\n')
+    if len(step_output) > 0:
+        print step_output.rstrip('\n')
 
     return exit_states

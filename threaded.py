@@ -41,7 +41,7 @@ available_states = threading.Semaphore(0)
 exit_event = threading.Event()
 
 
-def run_single_threaded(initial_states, x86_64):
+def run_single_threaded(initial_states, x86_64, scoring_function=None):
 
     states = list(initial_states)
 
@@ -50,9 +50,14 @@ def run_single_threaded(initial_states, x86_64):
             s = states.pop(random.randint(0, len(states) - 1))
             ns = emulator.single_step(s, x86_64)
             for n in ns:
-                states.append(n)
+                if scoring_function is not None:
+                    n.score = scoring_function(n)
+                    states.append(n)
+                    states.sort(key=lambda x:x.score)
+                else:
+                    states.append(n)
         except StateException, v:
-            print v
+            yield v
 
 
 def run_threaded(initial_states, x86_64, scoring_function=None):

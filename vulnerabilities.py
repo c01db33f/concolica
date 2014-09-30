@@ -122,7 +122,7 @@ class InvalidWrite(InvalidMemoryAccess):
 
 
     def __str__(self):
-        return '{} {:x} invalid write: {} {}'.format(
+        return '{} {:x} invalid write: {:x} {}'.format(
             self.state.id, self.state.ip, self.address, self.value)
 
 

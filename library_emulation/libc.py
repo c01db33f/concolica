@@ -95,7 +95,7 @@ def fread(s, cc):
         if size.symbolic or count.symbolic:
             raise NotImplementedError()
         elif fd is None:
-            for i in range(0, size.value * count.value):
+            for i in xrange(0, size.value * count.value):
                 output.append(bv.Symbol(8, 'file_{}_{:x}'.format(stream.value, offset)))
                 offset += 1
         else:
@@ -153,7 +153,7 @@ def gets(s, cc):
 
     output = OutputBuffer(s, buf)
 
-    for i in range(0, 0x1000):
+    for i in xrange(0, 0x100000):
         byte = bv.Symbol(8, unique_name('stdin_{0}'.format(i)))
         s.files[0]['bytes'].append(byte)
         output.append(byte)
@@ -219,7 +219,7 @@ def calloc(s, cc):
     else:
         ptr = s.memory.allocate(s, size.value * count.value)
         zero = bv.Constant(8, 0)
-        for i in range(0, size.value * count.value):
+        for i in xrange(0, size.value * count.value):
             s.memory.write_byte(s, ptr + i, zero)
 
     print('{} {} calloc(size={}, count={}); [{:x}]'.format(
@@ -260,15 +260,39 @@ def malloc(s, cc):
 
     size = f.params[0]
 
+    ss = []
+    sizes = []
     if size.symbolic:
-        raise NotImplementedError()
+        min_size = minimum(s, size)
+        max_size = maximum(s, size)
+
+        sizes.append(min_size.value)
+
+        if min_size != max_size:
+            sizes.append(max_size.value)
     else:
-        ptr = s.memory.allocate(s, size.value)
+        sizes.append(size.value)
 
-    print('{} {} malloc(size={}); [{:x}]'.format(
-        s.id, f.return_address(), size, ptr))
+    ss = []
+    total_sizes = len(sizes)
+    while len(sizes) > 0:
+        size_ = sizes.pop()
 
-    return f.ret(value=ptr)
+        if total_sizes > 1:
+            s_ = s.fork()
+        else:
+            s_ = s
+
+        s_.solver.add(size == bv.Constant(size.size, size_))
+        ptr = s_.memory.allocate(s_, size_)
+
+        f_ = cc(s_)
+        ss += f_.ret(value=ptr)
+
+        print('{} {} malloc(size={}); [{:x}]'.format(
+            s_.id, f_.return_address(), size_, ptr))
+
+    return ss
 
 
 # string.h
@@ -430,6 +454,100 @@ def memcmp(s, cc):
     return f.ret(value=result)
 
 
+def memset(s, cc):
+    f = cc(s)
+
+    dst = f.params[0]
+    val = f.params[1].resize(8)
+    count = f.params[2]
+
+    output = OutputBuffer(s, dst)
+
+    if count.symbolic:
+        count = maximum(s, count)
+
+    print ('{} {} memset(dst={}, val={}, count={});'.format(
+        s.id, f.return_address(), dst, val, count))
+
+    for i in xrange(0, count.value):
+        output.append(val)
+
+    return f.ret()
+
+
+def strcmp(s, cc):
+    f = cc(s)
+
+    str1 = f.params[0]
+    str2 = f.params[1]
+
+    print ('{} {} strcmp(str1={}, str2={})'.format(
+        s.id, f.return_address(), str1, str2))
+
+    iter1 = iter(String(s, str1))
+    iter2 = iter(String(s, str2))
+
+    first_smaller = bv.Constant(32, -1)
+    first_larger = bv.Constant(32, 1)
+    zero = bv.Constant(32, 0)
+
+    characters = []
+    not_terminated = None
+    not_already_terminated = bl.Constant(True)
+    while True:
+        (char1, constraint1) = next(iter1)
+        (char2, constraint2) = next(iter2)
+
+        not_terminated = not_already_terminated & constraint1
+        not_terminated = not_terminated & constraint2
+        not_terminated = not_terminated & (char1 == char2)
+
+        characters.append((not_already_terminated, char1, char2))
+
+        not_already_terminated = not_terminated
+
+        if ((not char1.symbolic and char1.value == 0)
+            or (not char2.symbolic and char2.value == 0)):
+            break
+
+    characters.reverse()
+
+    result = None
+    prev_result = None
+    for (not_already_terminated, char1, char2) in characters:
+        if result is None:
+            result = bv.if_then_else(
+                        char1 == char2,
+                        zero,
+                        bv.if_then_else(
+                            char1 < char2,
+                            first_smaller,
+                            first_larger))
+        else:
+            result = bv.if_then_else(
+                        not_already_terminated,
+                        bv.if_then_else(
+                            char1 == char2,
+                            prev_result,
+                            bv.if_then_else(
+                                char1 < char2,
+                                first_smaller,
+                                first_larger)),
+                        prev_result)
+
+        # this reduces the memory footprint_ of the resulting expression
+        # significantly
+        prev_result = bv.Symbol(32, unique_name('tmp'))
+        s.solver.add(prev_result == result)
+
+    if result.symbolic:
+        result_symbol = bv.Symbol(32, unique_name('strcmp'))
+        s.solver.add(result_symbol == result)
+        result = result_symbol
+
+    return f.ret(value=result)
+
+
 def register_hooks(s, cc):
     h = s.function_hooks
 
@@ -454,4 +572,7 @@ def register_hooks(s, cc):
     # string.h
     register_hook('memchr', memchr)
     register_hook('memcmp', memcmp)
+    register_hook('memset', memset)
+    register_hook('strcmp', strcmp)
     register_hook('__memcmp_sse4_1', memcmp)
+    register_hook('__strcmp_ssse3', strcmp)

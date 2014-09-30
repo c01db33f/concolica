@@ -22,6 +22,44 @@ from smt import bitvector as bv
 
 from concolica.utils import *
 
+# fcntl.h
+
+def fcntl(s, cc):
+    f = cc(s)
+
+    return f.ret()
+
+
+def open(s, cc):
+    f = cc(s)
+
+    # TODO: can we control path
+
+    path = f.params[0]
+    flags = f.params[1]
+    mode = f.params[2]
+
+    o = DummyOutputBuffer()
+    o.append_string(String(s, path))
+    path = o.string[:-1]
+
+    print('{} {} open(path="{}", flags={}, mode={});'.format(
+        s.id, f.return_address(), path, flags, mode))
+
+    file_id = len(s.files) + 1
+
+    s.files.append({
+        'path':path,
+        'mode':mode,
+        'offset':0,
+        'bytes':[]
+    })
+
+    print ('stream id: {}'.format(file_id))
+
+    return f.ret(value=file_id)
+
+
 # unistd.h
 
 def sleep(s, cc):
@@ -40,6 +78,9 @@ def register_hooks(s, cc):
 
     def register_hook(name, hook):
         h[name] = functools.partial(hook, cc=cc)
+
+    # fcntl.h
+    register_hook('open', open)
 
     # unistd.h
     register_hook('sleep', sleep)
