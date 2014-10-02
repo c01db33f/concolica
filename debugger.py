@@ -129,8 +129,8 @@ class VdbX86Process(VdbProcess):
 
         # vdb doesn't appear to read xmm registers...
 
-        #for reg in ['xmm0', 'xmm1', 'xmm2', 'xmm3', 'xmm4', 'xmm5', 'xmm6', 'xmm7']:
-        #    state.registers[reg] = bv.Constant(128, context.getRegisterByName(reg))
+        for reg in ['xmm0', 'xmm1', 'xmm2', 'xmm3', 'xmm4', 'xmm5', 'xmm6', 'xmm7']:
+            state.registers[reg] = bv.Constant(128, context.getRegisterByName(reg))
 
         state.registers['gsbase'] = bv.Constant(32, self._get_gsbase())
 
@@ -216,8 +216,8 @@ class VdbX86_64Process(VdbProcess):
 
         # vdb doesn't appear to read xmm registers
 
-        #for reg in ['xmm0', 'xmm1', 'xmm2', 'xmm3', 'xmm4', 'xmm5', 'xmm6', 'xmm7', 'xmm8', 'xmm9', 'xmm10', 'xmm11', 'xmm12', 'xmm13', 'xmm14', 'xmm15']:
-        #    state.registers[reg] = bv.Constant(128, context.getRegisterByName('x' + reg[1:]) & 0xffffffffffffffffffffffffffffffff)
+        for reg in ['xmm0', 'xmm1', 'xmm2', 'xmm3', 'xmm4', 'xmm5', 'xmm6', 'xmm7', 'xmm8', 'xmm9', 'xmm10', 'xmm11', 'xmm12', 'xmm13', 'xmm14', 'xmm15']:
+            state.registers[reg] = bv.Constant(128, context.getRegisterByName('x' + reg[1:]) & 0xffffffffffffffffffffffffffffffff)
 
         state.registers['fsbase'] = bv.Constant(64, self._get_fsbase())
         state.registers['gsbase'] = bv.Constant(64, self._get_gsbase())

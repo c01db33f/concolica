@@ -34,6 +34,7 @@ from concolica import serialisation
 from concolica import state
 from concolica.vulnerabilities import *
 
+import smt.bitvector as bv
 
 max_threads = 24
 active_threads = threading.BoundedSemaphore(max_threads)
@@ -90,6 +91,23 @@ def run_threaded(initial_states, x86_64, scoring_function=None):
                     print colored(v, 'white', 'on_red', attrs=['bold'])
                     print 'saving vuln state {}'.format(v.state.id)
                     serialisation.save('vuln_state_{}'.format(v.state.id), v)
+                    data = ''
+
+                    if isinstance(v, ArbitraryRead):
+                        v.state.solver.add(v.address == bv.Constant(v.address.size, 0xc01db33f))
+
+                    s = v.state
+                    m = v.state.solver.model()
+                    for i in range(0, 0x4000):
+                        name = 'ttf_{:x}'.format(i)
+                        if name in m:
+                            data += chr(m[name].value)
+                        else:
+                            data += '#'
+
+                    print colored(data, 'white', 'on_red', attrs=['bold'])
+                    with open('font_{}.ttf'.format(v.state.id), 'wb') as tmp:
+                        tmp.write(data)
 
             active_threads.release()
             time.sleep(1.0)

@@ -122,7 +122,7 @@ class State(object):
     _state_id = interlocked.Counter()
 
     def __init__(self, parent=None):
-        self.id = State._state_id.increment()
+        self.id = 0
         self.parent = parent
         self.score = 0
 
@@ -184,13 +184,22 @@ class State(object):
 
     def fork(self):
         new = None
+
         #if self.registers.dirty() or self.memory.dirty():
             # we are substantively different to parent
+
         new = State(self)
+        if self.id == 0:
+            new.id = State._state_id.increment()
+        else:
+            new.id = self.id
+            self.id = 0
+
         #else:
         #    new = State(self.parent)
         #    new.ip = self.ip
         #    new.il_index = self.il_index
+
         return new
 
 
