@@ -160,19 +160,19 @@ class State(object):
                 'path':'stdin',
                 'mode':'r',
                 'offset':0,
-                'bytes':[]
+                'bytes':dict()
             },
             {
                 'path':'stdout',
                 'mode':'w',
                 'offset':0,
-                'bytes':[]
+                'bytes':dict()
             },
             {
                 'path':'stderr',
                 'mode':'w',
                 'offset':0,
-                'bytes':[]
+                'bytes':dict()
             }]
             self.trace = []
 

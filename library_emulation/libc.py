@@ -23,6 +23,98 @@ from smt import bitvector as bv
 from concolica.utils import *
 
 
+# err.h
+
+def err(s, cc):
+    f = cc(s)
+
+    eval = f.params[0]
+    fmt = f.params[1]
+    va_args = f.va_args(2)
+
+    print('{} {} err(eval={}, fmt={})'.format(
+        s.id, f.return_address(), eval, fmt))
+
+    output = DummyOutputBuffer()
+
+    states, outputs = format_string(s, output, fmt, va_args)
+
+    ss = []
+
+    for s_, o in zip(states, outputs):
+        output_string = o.string.strip('\r').strip('\n')
+        print('{}: '.format(s.id) + colored(output_string, 'green'))
+
+    return []
+
+
+def errx(s, cc):
+    f = cc(s)
+
+    eval = f.params[0]
+    fmt = f.params[1]
+    va_args = f.va_args(2)
+
+    print('{} {} errx(eval={}, fmt={})'.format(
+        s.id, f.return_address(), eval, fmt))
+
+    output = DummyOutputBuffer()
+
+    states, outputs = format_string(s, output, fmt, va_args)
+
+    ss = []
+
+    for s_, o in zip(states, outputs):
+        output_string = o.string.strip('\r').strip('\n')
+        print('{}: '.format(s.id) + colored(output_string, 'green'))
+
+    return []
+
+
+def warn(s, cc):
+    f = cc(s)
+
+    fmt = f.params[0]
+    va_args = f.va_args(1)
+
+    print('{} {} warn(fmt={})'.format(
+        s.id, f.return_address(), eval, fmt))
+
+    output = DummyOutputBuffer()
+
+    states, outputs = format_string(s, output, fmt, va_args)
+
+    ss = []
+
+    for s_, o in zip(states, outputs):
+        output_string = o.string.strip('\r').strip('\n')
+        print('{}: '.format(s.id) + colored(output_string, 'green'))
+
+    return []
+
+
+def warnx(s, cc):
+    f = cc(s)
+
+    fmt = f.params[0]
+    va_args = f.va_args(1)
+
+    print('{} {} warnx(fmt={})'.format(
+        s.id, f.return_address(), eval, fmt))
+
+    output = DummyOutputBuffer()
+
+    states, outputs = format_string(s, output, fmt, va_args)
+
+    ss = []
+
+    for s_, o in zip(states, outputs):
+        output_string = o.string.strip('\r').strip('\n')
+        print('{}: '.format(s.id) + colored(output_string, 'green'))
+
+    return []
+
+
 # stdio.h
 
 def fflush(s, cc):
@@ -61,7 +153,7 @@ def fopen(s, cc):
         'path':path,
         'mode':mode,
         'offset':0,
-        'bytes':[]
+        'bytes':dict()
     })
 
     return f.ret(value=file_id)
@@ -553,6 +645,12 @@ def register_hooks(s, cc):
 
     def register_hook(name, hook):
         h[name] = functools.partial(hook, cc=cc)
+
+    # err.h
+    register_hook('err', err)
+    register_hook('errx', errx)
+    register_hook('warn', warn)
+    register_hook('warnx', warnx)
 
     # stdio.h
     register_hook('fflush', fflush)

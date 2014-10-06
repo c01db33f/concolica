@@ -285,7 +285,7 @@ def sys_open(s, cc):
         'path':path,
         'mode':mode,
         'offset':0,
-        'bytes':[]
+        'bytes':dict()
     })
 
     print ('stream id: {}'.format(file_id))
@@ -303,31 +303,98 @@ def sys_ptrace(s, cc):
 
 
 def sys_read(s, cc):
-    function = cc(s)
+    f = cc(s)
 
-    fd = function.params[0]
-    buf = function.params[1]
-    size = function.params[2]
+    fd = f.params[0]
+    buf = f.params[1]
+    size = f.params[2]
 
     print('{} {} sys_read(fd={}, ptr={}, size={});'.format(
-        s.id, function.return_address(), fd, buf, size))
+        s.id, f.return_address(), fd, buf, size))
 
     output = OutputBuffer(s, buf)
 
-    if size.symbolic:
-        raise NotImplementedError()
-    else:
-        if not fd.symbolic and fd.value == 0:
-            for i in range(0, size.value):
-                byte = bv.Symbol(8, unique_name('stdin_{0}'.format(i)))
-                s.stdin.append(byte)
-                output.append(byte)
-        else:
-            for i in range(0, size.value):
-                byte = bv.Symbol(8, unique_name('sys_read_{0}'.format(i)))
-                output.append(byte)
+    if fd.symbolic:
+        raise ValueError('wtf')
 
-    return function.ret(value=size)
+    if fd.value > len(s.files):
+        return f.ret(value=0)
+    else:
+        file = s.files[fd.value]
+        offset = file['offset']
+        output = OutputBuffer(s, buf)
+
+        real_fd = None
+        if file['path'] not in ['stdin', 'stdout', 'stderr']:
+            real_fd = open(file['path'], 'rb')
+
+        if size.symbolic:
+            raise NotImplementedError()
+        elif real_fd is None:
+            for i in xrange(0, size.value):
+                b = bv.Symbol(8, 'file_{}_{:x}'.format(fd.value, offset))
+                output.append(b)
+                file['bytes'][offset] = b
+                offset += 1
+        else:
+            real_fd.seek(offset, 0)
+            for i in range(0, size.value):
+                byte = real_fd.read(1)
+                if len(byte) == 1:
+                    if byte == '#':
+                        b = bv.Symbol(8, 'file_{}_{:x}'.format(fd.value, offset))
+                    else:
+                        b = bv.Constant(8, ord(byte))
+                    output.append(b)
+                    file['bytes'][offset] = b
+                    offset += 1
+                else:
+                    break
+
+        file['offset'] = offset
+
+        if real_fd is not None:
+            real_fd.close()
+
+    return f.ret(value=size)
+
+
+def sys_setgroups(s, cc):
+    f = cc(s)
+
+    size = f.params[0]
+    list = f.params[1]
+
+    print('{} {} sys_setgroups(size={}, list={})'.format(
+        s.id, f.return_address(), size, list))
+
+    return f.ret(value=0)
+
+
+def sys_setresgid(s, cc):
+    f = cc(s)
+
+    rgid = f.params[0]
+    egid = f.params[1]
+    sgid = f.params[2]
+
+    print('{} {} sys_setresgid(rgid={}, egid={}, sgid={})'.format(
+        s.id, f.return_address(), rgid, egid, sgid))
+
+    return f.ret(value=0)
+
+
+def sys_setresuid(s, cc):
+    f = cc(s)
+
+    ruid = f.params[0]
+    euid = f.params[1]
+    suid = f.params[2]
+
+    print('{} {} sys_setresuid(ruid={}, euid={}, suid={})'.format(
+        s.id, f.return_address(), ruid, euid, suid))
+
+    return f.ret(value=0)
 
 
 def sys_write(s, cc):
@@ -372,6 +439,9 @@ class LinuxX86(object):
         0x36:sys_ioctl,
         0xc0:sys_mmap,
         0xc5:sys_fstat64,
+        0xce:sys_setgroups,
+        0xd0:sys_setresuid,
+        0xd2:sys_setresgid,
         0xf0:sys_futex,
         0xfc:sys_exit_group,
     }

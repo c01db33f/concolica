@@ -23,6 +23,7 @@ import reil.x86.translator as x86
 import smt.bitvector as bv
 
 from concolica.utils import *
+from concolica.vulnerabilities import *
 
 
 def operand_value(s, o):
@@ -585,10 +586,7 @@ def fetch_instruction(s, x86_64=False):
             _translation_cache[i.address] = i
 
     if ip not in _translation_cache:
-        #sp = s.registers['esp']
-        #print s.memory.dump(range(sp.value, sp.value + 128))
-        print '{} invalid ip {:08x}'.format(s.id, ip)
-        return None
+        raise InvalidExecution(s, ip)
 
     i = _translation_cache[ip]
     s.ip += i.size
@@ -618,8 +616,16 @@ def single_step(s, x86_64=False):
         if s.symbols[i.address] in s.function_hooks:
             ss = s.function_hooks[symbol](s)
             for s in ss:
-                #s.solver.check()
+
+                # any state needing more than 60 seconds in it's last solver
+                # invocation needs to be concretised.
+                if s.solver.solve_time() > 15:
+                    print '>>>>>>>>>>>>>>>> Concretising {}'.format(s.id)
+                    s.solver.concretise()
+
+                # remove temporary registers
                 s.clear_il_state()
+
             return ss
         else:
             step_output += colored('{} calling {}'.format(s.id, symbol), 'green') + '\n'
@@ -636,8 +642,16 @@ def single_step(s, x86_64=False):
         s = states.pop()
 
         if s.il_index >= max_il_index:
-            #s.solver.check()
+
+            # any state needing more than 60 seconds in it's last solver
+            # invocation needs to be concretised.
+            if s.solver.solve_time() > 15:
+                print '>>>>>>>>>>>>>>>> Concretising {}'.format(s.id)
+                s.solver.concretise()
+
+            # remove temporary registers
             s.clear_il_state()
+
             exit_states.append(s)
             continue
 

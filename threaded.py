@@ -60,7 +60,6 @@ def run_single_threaded(initial_states, x86_64, scoring_function=None):
         except StateException, v:
             yield v
 
-
 def run_threaded(initial_states, x86_64, scoring_function=None):
     global active_threads
     global available_states

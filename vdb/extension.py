@@ -24,7 +24,7 @@ from concolica import serialisation
 
 def dump_state(vdb, line):
     '''
-    continue execution concolically
+    dump state for later concolic execution
     '''
     try:
         parser = argparse.ArgumentParser()

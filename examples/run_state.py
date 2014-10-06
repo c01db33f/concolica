@@ -26,17 +26,24 @@ from concolica.library_emulation import libc
 from concolica.library_emulation import unix
 from concolica.syscall_emulation import linux
 
-# 0x1000
-# 0x1000
-# 0x238
-# 0x1
-# 0x1
-# 0x4000
-# 0x1000
-# 0x2000
-# 0x1800
+class CoverageScoringFunction(object):
 
+    max_score = 0x100000000000000000
 
+    def __init__(self):
+        self.hit_count = dict()
+
+    def __call__(self, state):
+        ip = state.ip
+
+        if ip not in self.hit_count:
+            self.hit_count[ip] = 1
+        else:
+            self.hit_count[ip] += 1
+
+        score = (self.max_score - (self.hit_count[ip] * 0x1000000000000000))
+        score = score | ip
+        return score
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -62,5 +69,7 @@ if __name__ == '__main__':
     #import pdb
     #pdb.set_trace()
 
-    threaded.run_single_threaded([state], x86_64)
+    print 'about to run'
+
+    threaded.run_single_threaded([state], x86_64, CoverageScoringFunction())
 
