@@ -16,10 +16,8 @@
 
 
 import copy
-import itertools
 import re
 
-from concolica import interlocked
 from concolica import log
 from concolica import memory
 from concolica.utils import *
@@ -29,7 +27,6 @@ import reil
 
 import smt
 import smt.bitvector as bv
-import smt.boolean as bl
 
 
 class Registers(dict):
@@ -37,25 +34,21 @@ class Registers(dict):
     __slots__ = ('_registers', '_parent')
 
     def __init__(self, parent=None):
-        #self._registers = dict()
+        dict.__init__(self)
         self._parent = parent
         if self.depth() > 2:
             self.flatten()
 
-
     def dirty(self):
         return self.depth() == 0 or len(self) > 0
-
 
     def __getstate__(self):
         self.flatten()
         return dict(self)
 
-
-    def __setstate__(self, dict):
-        self.update(dict)
+    def __setstate__(self, d):
+        self.update(d)
         self._parent = None
-
 
     def __contains__(self, item):
         if dict.__contains__(self, item):
@@ -66,13 +59,11 @@ class Registers(dict):
 
         return False
 
-
     def __missing__(self, key):
         if self._parent is None:
             raise KeyError()
 
         return self._parent[key]
-
 
     def clear_il_state(self):
 
@@ -83,7 +74,6 @@ class Registers(dict):
             if il_register_re.match(r):
                 del self[r]
 
-
     def depth(self):
         d = 0
         p = self._parent
@@ -93,7 +83,6 @@ class Registers(dict):
             p = p._parent
 
         return d
-
 
     def flatten(self):
         cs = []
@@ -109,7 +98,6 @@ class Registers(dict):
             self.update(c)
 
         self._parent = p
-
 
 
 class State(object):
@@ -153,35 +141,31 @@ class State(object):
             self.symbols = None
             self.solver = smt.Solver()
             self.files = [
-            {
-                'path':'stdin',
-                'mode':'r',
-                'offset':0,
-                'bytes':dict()
-            },
-            {
-                'path':'stdout',
-                'mode':'w',
-                'offset':0,
-                'bytes':dict()
-            },
-            {
-                'path':'stderr',
-                'mode':'w',
-                'offset':0,
-                'bytes':dict()
-            }]
+                {
+                    'path':   'stdin',
+                    'mode':   'r',
+                    'offset': 0,
+                    'bytes':  dict()
+                },
+                {
+                    'path':   'stdout',
+                    'mode':   'w',
+                    'offset': 0,
+                    'bytes':  dict()
+                },
+                {
+                    'path':   'stderr',
+                    'mode':   'w',
+                    'offset': 0,
+                    'bytes':  dict()
+                }]
             self.trace = []
-
 
     def clear_il_state(self):
         self.registers.clear_il_state()
         self.il_index = 0
 
-
     def fork(self):
-        new = None
-
         new = State(self)
         if self.id == 0:
             new.id = State._state_id.increment()
@@ -190,7 +174,6 @@ class State(object):
             self.id = 0
 
         return new
-
 
     def read(self, address, size):
         if arbitrary(self, address):
@@ -226,12 +209,11 @@ class State(object):
 
         return value
 
-
     def write(self, address, value):
-        bytes = []
+        bs = []
         for i in range(0, value.size, 8):
-            bytes.append(value.extract(start=i, end=i + 8))
-        bytes.reverse()
+            bs.append(value.extract(start=i, end=i + 8))
+        bs.reverse()
 
         if arbitrary(self, address):
             raise ArbitraryWrite(self, address, value)
@@ -239,15 +221,14 @@ class State(object):
         as_ = concretise(self, address)
         if len(as_) > 1:
             for a in as_:
-                for i, byte in enumerate(bytes):
+                for i, byte in enumerate(bs):
                     self.memory.write_byte(self, a.value + i, smt.bv.IfThenElse(
-                            a != address,
-                            self.memory.read_byte(self, a.value + i),
-                            byte))
+                        a != address,
+                        self.memory.read_byte(self, a.value + i),
+                        byte))
         else:
             for i, byte in enumerate(bytes):
                 self.memory.write_byte(self, as_[0].value + i, byte)
-
 
     def branch(self, address):
         ss = []
@@ -277,7 +258,6 @@ class State(object):
                 ss.append(self)
 
         return ss
-
 
     def throw(self, exception):
         raise exception

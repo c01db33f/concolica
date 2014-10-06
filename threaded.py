@@ -51,7 +51,7 @@ def run_single_threaded(initial_states, x86_64, scoring_function=None):
                 if scoring_function is not None:
                     n.score = scoring_function(n)
                     states.append(n)
-                    states.sort(key=lambda x:x.score)
+                    states.sort(key=lambda x: x.score)
                 else:
                     states.append(n)
         except StateException, v:
@@ -80,7 +80,7 @@ def run_threaded(initial_states, x86_64, scoring_function=None):
                         if scoring_function is not None:
                             n.score = scoring_function(n)
                             states.append(n)
-                            states.sort(key=lambda x:x.score)
+                            states.sort(key=lambda x: x.score)
                         else:
                             states.append(n)
 
