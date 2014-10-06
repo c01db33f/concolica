@@ -18,11 +18,11 @@
 # GENERAL EXCEPTIONS                                                   #
 ########################################################################
 
+
 class StateException(BaseException):
 
     def __init__(self, state):
         self.state = state
-
 
     def __str__(self):
         return '{} {:x} exception'.format(
@@ -60,7 +60,6 @@ class InvalidMemoryAccess(StateException):
         StateException.__init__(self, state)
         self.address = address
 
-
     def __str__(self):
         return '{} {:x} invalid memory access: {}'.format(
             self.state.id, self.state.ip, self.address)
@@ -73,7 +72,6 @@ class InvalidRead(InvalidMemoryAccess):
     def __init__(self, state, address):
         InvalidMemoryAccess.__init__(self, state, address)
 
-
     def __str__(self):
         return '{} {:x} invalid read: {:x}'.format(
             self.state.id, self.state.ip, self.address)
@@ -83,7 +81,6 @@ class UninitialisedRead(InvalidRead):
     
     def __init__(self, state, address):
         InvalidRead.__init__(self, state, address)
-
 
     def __str__(self):
         return '{} {:x} uninitialised read: {:x}'.format(
@@ -95,7 +92,6 @@ class UnmappedRead(InvalidRead):
     def __init__(self, state, address):
         InvalidRead.__init__(self, state, address)
 
-
     def __str__(self):
         return '{} {:x} unmapped read: {:x}'.format(
             self.state.id, self.state.ip, self.address)
@@ -105,7 +101,6 @@ class ArbitraryRead(InvalidRead):
     
     def __init__(self, state, address):
         InvalidRead.__init__(self, state, address)
-
 
     def __str__(self):
         return '{} {:x} arbitrary read: {}'.format(
@@ -120,7 +115,6 @@ class InvalidWrite(InvalidMemoryAccess):
         InvalidMemoryAccess.__init__(self, state, address)
         self.value = value
 
-
     def __str__(self):
         return '{} {:x} invalid write: {:x} {}'.format(
             self.state.id, self.state.ip, self.address, self.value)
@@ -131,7 +125,6 @@ class UnmappedWrite(InvalidWrite):
     def __init__(self, state, address, value):
         InvalidWrite.__init__(self, state, address, value)
 
-
     def __str__(self):
         return '{} {:x} unmapped write: {} {}'.format(
             self.state.id, self.state.ip, self.address, self.value)
@@ -141,7 +134,6 @@ class ArbitraryWrite(InvalidWrite):
     
     def __init__(self, state, address, value):
         InvalidWrite.__init__(self, state, address, value)
-
 
     def __str__(self):
         return '{} {:x} arbitrary write: {} {}'.format(
@@ -155,7 +147,6 @@ class InvalidExecution(InvalidMemoryAccess):
     def __init__(self, state, address):
         InvalidMemoryAccess.__init__(self, state, address)
 
-
     def __str__(self):
         return '{} {:x} invalid execution: {}'.format(
             self.state.id, self.state.ip, self.address)
@@ -165,7 +156,6 @@ class ArbitraryExecution(InvalidExecution):
     
     def __init__(self, state, address):
         InvalidExecution.__init__(self, state, address)
-
 
     def __str__(self):
         return '{} {:x} arbitrary execution: {}'.format(
@@ -177,7 +167,6 @@ class SymbolicExecution(InvalidExecution):
     def __init__(self, state, address, byte):
         InvalidExecution.__init__(self, state, address)
         self.byte = byte
-
 
     def __str__(self):
         return '{} {:x} symbolic execution: {}'.format(

@@ -21,9 +21,11 @@ from smt import bitvector as bv
 from concolica import interlocked
 
 
-name_index = interlocked.Counter()
+_name_index = interlocked.Counter()
+
+
 def unique_name(name):
-    return '{0}_{1:x}'.format(name, name_index.increment())
+    return '{0}_{1:x}'.format(name, _name_index.increment())
 
 
 def mask(size):
@@ -131,7 +133,8 @@ def maximum(state, value):
 def arbitrary(state, value):
     if state.solver.check(value == bv.Constant(value.size, 0xc01db33f)):
         return True
-    return False
+    else:
+        return False
 
 
 class String(object):
@@ -153,6 +156,7 @@ class String(object):
                     if not constraint.symbolic:
                         constraint = (byte != 0)
                     else:
+                        # not sure that I've implemented &= in smt
                         constraint = constraint & (byte != 0)
 
                     # this might look silly, but it actually makes the
@@ -171,18 +175,15 @@ class String(object):
 
 class OutputBuffer(object):
 
-
     def __init__(self, state, address):
         self.state = state
         self.address = address
         self.index = 0
 
-
     def copy(self, new_state):
         new = OutputBuffer(new_state, self.address)
         new.index = self.index
         return new
-
 
     def append(self, c):
         if isinstance(c, str):
@@ -191,7 +192,6 @@ class OutputBuffer(object):
         write_address = self.address + bv.Constant(self.address.size, self.index)
         self.index += 1
         self.state.write(write_address, c)
-
 
     def append_string(self, s, max_len=None):
         if max_len is not None:
@@ -210,7 +210,7 @@ class OutputBuffer(object):
                     self.append(c)
                     l += 1
             else:
-                raise 'not supported this yet, whatever this is'
+                raise NotImplementedError()
         else:
             if isinstance(s, str):
                 for c in s:
@@ -219,7 +219,7 @@ class OutputBuffer(object):
                 for c, constraint in s:
                     self.append(c)
             else:
-                raise 'not supported this yet, whatever this is'
+                raise NotImplementedError()
 
 
 class BoundOutputBuffer(OutputBuffer):
@@ -241,7 +241,7 @@ class BoundOutputBuffer(OutputBuffer):
             OutputBuffer.append(self, c)
 
 
-class DummyOutputBuffer(OutputBuffer):
+class DummyOutputBuffer():
 
     def __init__(self):
         self.string = ''
@@ -261,6 +261,34 @@ class DummyOutputBuffer(OutputBuffer):
         else:
             self.string += chr(c.value)
         self.index += 1
+
+    def append_string(self, s, max_len=None):
+        if max_len is not None:
+            if isinstance(s, str):
+                l = 0
+                for c in s:
+                    if l > max_len:
+                        break
+                    self.append(c)
+                    l += 1
+            elif isinstance(s, String):
+                l = 0
+                for c, constraint in s:
+                    if l > max_len:
+                        break
+                    self.append(c)
+                    l += 1
+            else:
+                raise NotImplementedError()
+        else:
+            if isinstance(s, str):
+                for c in s:
+                    self.append(c)
+            elif isinstance(s, String):
+                for c, constraint in s:
+                    self.append(c)
+            else:
+                raise NotImplementedError()
 
 
 def concrete_format_string(state, output, fmt, va_args):
@@ -304,7 +332,7 @@ def concrete_format_string(state, output, fmt, va_args):
                 output_constraints = []
 
                 if c == '%':
-                    output_string = '%'
+                    output_strings.append('%')
                 elif c == 'c':
                     # print a single character
                     value = va_args[arg_index].resize(8)
@@ -368,7 +396,6 @@ def concrete_format_string(state, output, fmt, va_args):
                     # skip unrecongised characters
                     pass
 
-
                 def _format_output_string(string, width, zero_fill, left_align):
                     if len(width) > 0:
                         width = int(width)
@@ -376,7 +403,7 @@ def concrete_format_string(state, output, fmt, va_args):
                             if zero_fill:
                                 string = '0' + string
                             elif left_align:
-                                string = string + ' '
+                                string += ' '
                             else:
                                 string = ' ' + string
                     return string
