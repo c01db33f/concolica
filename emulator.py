@@ -433,140 +433,6 @@ def reil_single_step(ri, s):
     return opcode_map[ri.opcode](ri, s)
 
 
-def reil_register_dump(s, ri):
-    output = ''
-
-    interesting = []
-
-    if isinstance(ri.input0, reil.TemporaryOperand):
-        interesting.append(ri.input0.name)
-
-    if isinstance(ri.input1, reil.TemporaryOperand):
-        interesting.append(ri.input1.name)
-
-    for r in interesting:
-        if s.registers[r].symbolic:
-            output += '{0:2}: symbolic\n'.format(r)
-        else:
-            output += '{0:2}: {1}\n'.format(r, s.registers[r])
-
-    if len(output) > 0:
-        output = output[:-1]
-
-    return output
-
-
-def x86_register_dump(s):
-    output = ''
-    for r in ['eax', 'ebx', 'ecx', 'edx']:
-        if r in s.registers and s.registers[r] is not None:
-            if s.registers[r].symbolic:
-                output += '{0}: symbolic   '.format(r)
-            else:
-                output += '{0}: {1}   '.format(r, s.registers[r])
-        else:
-            output += '{0}:            '.format(r)
-    output += '\n'
-
-    for r in ['esi', 'edi', 'ebp', 'esp']:
-        if r in s.registers and s.registers[r] is not None:
-            if s.registers[r].symbolic:
-                output += '{0}: symbolic   '.format(r)
-            else:
-                output += '{0}: {1}   '.format(r, s.registers[r])
-        else:
-            output += '{0}:            '.format(r)
-    output += '\n'
-
-    for r in ['xmm0', 'xmm1', 'xmm2', 'xmm3', 'xmm4', 'xmm5', 'xmm6', 'xmm7']:
-        if r in s.registers and s.registers[r] is not None:
-            if s.registers[r].symbolic:
-                output += '{0}: symbolic\n'.format(r)
-            elif s.registers[r].value != 0:
-                output += '{0}: {1}\n'.format(r, s.registers[r])
-
-    for r in ['cf', 'pf', 'af', 'zf', 'sf', 'df', 'of']:
-        if r in s.registers and s.registers[r] is not None:
-            if s.registers[r].symbolic:
-                output += ' {0}: s  '.format(r)
-            elif s.registers[r].value != 0:
-                output += ' {0}: 1  '.format(r)
-            else:
-                output += ' {0}: 0  '.format(r)
-        else:
-            output += ' ' + r + ':    '
-    return output
-
-
-def x86_64_register_dump(s):
-    output = ''
-    for r in ['rax', 'rbx', 'rcx', 'rdx']:
-        if r in s.registers and s.registers[r] is not None:
-            if s.registers[r].symbolic:
-                output += '{0}: symbolic           '.format(r)
-            else:
-                output += '{0}: {1}   '.format(r, s.registers[r])
-        else:
-            output += '{0}:                    '.format(r)
-    output += '\n'
-
-    for r in ['rsi', 'rdi', 'rbp', 'rsp']:
-        if r in s.registers and s.registers[r] is not None:
-            if s.registers[r].symbolic:
-                output += '{0}: symbolic           '.format(r)
-            else:
-                output += '{0}: {1}   '.format(r, s.registers[r])
-        else:
-            output += '{0}:                    '.format(r)
-    output += '\n'
-
-    for r in ['r8', 'r9', 'r10', 'r11']:
-        if r in s.registers and s.registers[r] is not None:
-            if s.registers[r].symbolic:
-                output += '{0:3}: symbolic           '.format(r)
-            else:
-                output += '{0:3}: {1}   '.format(r, s.registers[r])
-        else:
-            output += '{0:3}:                    '.format(r)
-    output += '\n'
-
-    for r in ['r12', 'r13', 'r14', 'r15']:
-        if r in s.registers and s.registers[r] is not None:
-            if s.registers[r].symbolic:
-                output += '{0}: symbolic           '.format(r)
-            else:
-                output += '{0}: {1}   '.format(r, s.registers[r])
-        else:
-            output += '{0}:                    '.format(r)
-    output += '\n'
-
-    #for r in ['xmm0', 'xmm1', 'xmm2', 'xmm3', 'xmm4', 'xmm5', 'xmm6', 'xmm7', 'xmm8', 'xmm9', 'xmm10', 'xmm11', 'xmm12', 'xmm13', 'xmm14', 'xmm15']:
-    #    if r in s.registers:
-    #        if s.registers[r].symbolic:
-    #            output += '{0}: symbolic\n'.format(r)
-    #        else:
-    #            output += '{0}: {1}\n'.format(r, s.registers[r])
-
-    for r in ['cf', 'pf', 'af', 'zf', 'sf', 'df', 'of']:
-        if r in s.registers and s.registers[r] is not None:
-            if s.registers[r].symbolic:
-                output += ' {0}: s  '.format(r)
-            elif s.registers[r].value != 0:
-                output += ' {0}: 1  '.format(r)
-            else:
-                output += ' {0}: 0  '.format(r)
-        else:
-            output += ' ' + r + ':    '
-    return output
-
-
-def register_dump(s, x86_64=False):
-    if x86_64:
-        return x86_64_register_dump(s)
-    else:
-        return x86_register_dump(s)
-
-
 _translation_cache = dict()
 def fetch_instruction(s, x86_64=False):
     ip = s.ip
@@ -620,7 +486,7 @@ def single_step(s, x86_64=False):
                 # any state needing more than 60 seconds in it's last solver
                 # invocation needs to be concretised.
                 if s.solver.solve_time() > 15:
-                    print '>>>>>>>>>>>>>>>> Concretising {}'.format(s.id)
+                    s.log.warning('concretising (last solve took: {}s)', s.solver.solve_time)
                     s.solver.concretise()
 
                 # remove temporary registers
@@ -630,9 +496,7 @@ def single_step(s, x86_64=False):
         else:
             s.log.function_call(None, symbol)
 
-    #step_output += colored(register_dump(s, x86_64), 'blue') + '\n'
-    #step_output += colored('{} {:4} {}'.format(s.id, hc, i), 'yellow') + '\n'
-    s.log.native(hc, i)
+    s.log.native_instruction(hc, i, x86_64)
 
     max_il_index = len(i.il_instructions)
 
@@ -647,7 +511,7 @@ def single_step(s, x86_64=False):
             # any state needing more than 60 seconds in it's last solver
             # invocation needs to be concretised.
             if s.solver.solve_time() > 15:
-                print '>>>>>>>>>>>>>>>> Concretising {}'.format(s.id)
+                s.log.warning('concretising (last solve took: {}s)', s.solver.solve_time)
                 s.solver.concretise()
 
             # remove temporary registers
@@ -659,10 +523,7 @@ def single_step(s, x86_64=False):
         ri = i.il_instructions[s.il_index]
         s.il_index += 1
 
-        #step_output += '\n'
-        #step_output += colored(reil_register_dump(s, ri), 'magenta') + '\n'
-        #step_output += colored('{} {:2} {}'.format(s.id, s.il_index-1, ri), 'magenta') + '\n'
-        s.log.reil(ri)
+        s.log.reil_instruction(ri)
 
         states += reil_single_step(ri, s)
 

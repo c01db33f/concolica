@@ -32,7 +32,7 @@ from concolica.syscall_emulation import linux
 logger = logging.getLogger('concolica')
 logger.setLevel(logging.INFO)
 
-fh = logging.FileHandler('concolica.log')
+fh = logging.FileHandler('run_trace.log')
 fh.setLevel(log.REIL_REGISTERS)
 logger.addHandler(fh)
 
@@ -83,6 +83,7 @@ if __name__ == '__main__':
         libc.register_hooks(state, calling_conventions.Amd64SysV)
         unix.register_hooks(state, calling_conventions.Amd64SysV)
 
+    # TODO: temporary fix until I dump a new state from debugger...
     state.log = log.StateLogger(state)
 
     #import pdb
