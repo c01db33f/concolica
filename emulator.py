@@ -628,10 +628,11 @@ def single_step(s, x86_64=False):
 
             return ss
         else:
-            step_output += colored('{} calling {}'.format(s.id, symbol), 'green') + '\n'
+            s.log.function_call(None, symbol)
 
     #step_output += colored(register_dump(s, x86_64), 'blue') + '\n'
-    step_output += colored('{} {:4} {}'.format(s.id, hc, i), 'yellow') + '\n'
+    #step_output += colored('{} {:4} {}'.format(s.id, hc, i), 'yellow') + '\n'
+    s.log.native(hc, i)
 
     max_il_index = len(i.il_instructions)
 
@@ -661,6 +662,7 @@ def single_step(s, x86_64=False):
         #step_output += '\n'
         #step_output += colored(reil_register_dump(s, ri), 'magenta') + '\n'
         #step_output += colored('{} {:2} {}'.format(s.id, s.il_index-1, ri), 'magenta') + '\n'
+        s.log.reil(ri)
 
         states += reil_single_step(ri, s)
 

@@ -24,11 +24,6 @@ from concolica.utils import *
 
 # fcntl.h
 
-def fcntl(s, cc):
-    f = cc(s)
-
-    return f.ret()
-
 
 def open(s, cc):
     f = cc(s)
@@ -43,8 +38,7 @@ def open(s, cc):
     o.append_string(String(s, path))
     path = o.string[:-1]
 
-    print('{} {} open(path="{}", flags={}, mode={});'.format(
-        s.id, f.return_address(), path, flags, mode))
+    s.log.function_call(f, 'open(path="{}", flags={}, mode={})', path, flags, mode)
 
     file_id = len(s.files) + 1
 
@@ -69,8 +63,7 @@ def read(s, cc):
     buf = f.params[1]
     size = f.params[2]
 
-    print('{} {} read(fd={}, ptr={}, size={});'.format(
-        s.id, f.return_address(), fd, buf, size))
+    s.log.function_call(f, 'read(fd={}, ptr={}, size={})', fd, buf, size)
 
     output = OutputBuffer(s, buf)
 
@@ -124,8 +117,7 @@ def sleep(s, cc):
 
     seconds = f.params[0]
 
-    print('{} {} sleep(seconds={});'.format(
-        s.id, f.return_address(), seconds))
+    s.log.function_call(f, 'sleep(seconds={})', seconds)
 
     return f.ret(value=0)
 

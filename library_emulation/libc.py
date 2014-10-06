@@ -32,8 +32,7 @@ def err(s, cc):
     fmt = f.params[1]
     va_args = f.va_args(2)
 
-    print('{} {} err(eval={}, fmt={})'.format(
-        s.id, f.return_address(), eval, fmt))
+    s.log.function_call(f, 'err(eval={}, fmt={})', eval, fmt)
 
     output = DummyOutputBuffer()
 
@@ -43,7 +42,7 @@ def err(s, cc):
 
     for s_, o in zip(states, outputs):
         output_string = o.string.strip('\r').strip('\n')
-        print('{}: '.format(s.id) + colored(output_string, 'green'))
+        s_.log.output(output_string)
 
     return []
 
@@ -55,8 +54,7 @@ def errx(s, cc):
     fmt = f.params[1]
     va_args = f.va_args(2)
 
-    print('{} {} errx(eval={}, fmt={})'.format(
-        s.id, f.return_address(), eval, fmt))
+    s.log.function_call(f, 'errx(eval={}, fmt={})', eval, fmt)
 
     output = DummyOutputBuffer()
 
@@ -66,7 +64,7 @@ def errx(s, cc):
 
     for s_, o in zip(states, outputs):
         output_string = o.string.strip('\r').strip('\n')
-        print('{}: '.format(s.id) + colored(output_string, 'green'))
+        s_.log.output(output_string)
 
     return []
 
@@ -77,8 +75,7 @@ def warn(s, cc):
     fmt = f.params[0]
     va_args = f.va_args(1)
 
-    print('{} {} warn(fmt={})'.format(
-        s.id, f.return_address(), eval, fmt))
+    s.log.function_call(f, 'warn(fmt={})', fmt)
 
     output = DummyOutputBuffer()
 
@@ -88,7 +85,7 @@ def warn(s, cc):
 
     for s_, o in zip(states, outputs):
         output_string = o.string.strip('\r').strip('\n')
-        print('{}: '.format(s.id) + colored(output_string, 'green'))
+        s_.log.output(output_string)
 
     return []
 
@@ -99,8 +96,7 @@ def warnx(s, cc):
     fmt = f.params[0]
     va_args = f.va_args(1)
 
-    print('{} {} warnx(fmt={})'.format(
-        s.id, f.return_address(), eval, fmt))
+    s.log.function_call(f, 'warnx(fmt={})', fmt)
 
     output = DummyOutputBuffer()
 
@@ -110,7 +106,7 @@ def warnx(s, cc):
 
     for s_, o in zip(states, outputs):
         output_string = o.string.strip('\r').strip('\n')
-        print('{}: '.format(s.id) + colored(output_string, 'green'))
+        s_.log.output(output_string)
 
     return []
 
@@ -122,8 +118,7 @@ def fflush(s, cc):
 
     stream = f.params[0]
 
-    print('{} {} fflush(stream={});'.format(
-        s.id, f.return_address(), stream))
+    s.log.function_call(f, 'fflush(stream={})', stream)
 
     return f.ret(value=0)
 
@@ -146,8 +141,7 @@ def fopen(s, cc):
 
     file_id = len(s.files)
 
-    print('{} {} fopen(path="{}", mode="{}"); [{}]'.format(
-        s.id, f.return_address(), path, mode, file_id))
+    s.log.function_call(f, 'fopen(path="{}", mode="{}") [{}]', path, mode, file_id)
 
     s.files.append({
         'path':path,
@@ -167,8 +161,7 @@ def fread(s, cc):
     count = f.params[2]
     stream = f.params[3]
 
-    print('{} {} fread(ptr={}, size={}, count={}, stream={});'.format(
-        s.id, f.return_address(), buf, size, count, stream))
+    s.log.function_call(f, 'fread(ptr={}, size={}, count={}, stream={})', buf, size, count, stream)
 
     if stream.symbolic:
         raise ValueError('wtf')
@@ -229,8 +222,7 @@ def fseek(s, cc):
     elif origin.value == 4:
         origin = 'SEEK_HOLE'
 
-    print('{} {} fseek(stream={}, offset={}, origin={});'.format(
-        s.id, f.return_address(), stream, offset, origin))
+    s.log.function_call(f, 'fseek(stream={}, offset={}, origin={})', stream, offset, origin)
 
     return f.ret(value=0)
 
@@ -240,10 +232,12 @@ def gets(s, cc):
 
     buf = f.params[0]
 
-    print('{} {} gets(buf={});'.format(
-        s.id, f.return_address(), buf))
+
+    s.log.function_call(f, 'gets(buf={})', buf)
 
     output = OutputBuffer(s, buf)
+
+    # TODO: this needs to use the file for stdin instead of this nonsense
 
     for i in xrange(0, 0x100000):
         byte = bv.Symbol(8, unique_name('stdin_{0}'.format(i)))
@@ -262,8 +256,7 @@ def printf(s, cc):
     fmt = f.params[0]
     va_args = f.va_args(1)
 
-    print('{} {} printf(fmt={}, ...);'.format(
-        s.id, f.return_address(), fmt))
+    s.log.function_call(f, 'printf(fmt={}, ...)', fmt)
 
     output = DummyOutputBuffer()
 
@@ -273,7 +266,7 @@ def printf(s, cc):
 
     for s_, o in zip(states, outputs):
         output_string = o.string.strip('\r').strip('\n')
-        print('{}: '.format(s.id) + colored(output_string, 'green'))
+        s_.log.output(output_string)
 
         f_ = cc(s_)
         ss += f_.ret(value=o.index)
@@ -286,15 +279,14 @@ def puts(s, cc):
 
     buf = f.params[0]
 
-    print('{} {} puts(str={});'.format(
-        s.id, f.return_address(), buf))
+    s.log.function_call(f, 'puts(str={})', buf)
 
     output = DummyOutputBuffer()
     string = String(s, buf)
 
     output.append_string(string)
     output_string = output.string.strip('\r').strip('\n')
-    print('{}: '.format(s.id) + colored(output_string, 'green'))
+    s.log.output(output_string)
 
     return f.ret(value=1)
 
@@ -314,8 +306,7 @@ def calloc(s, cc):
         for i in xrange(0, size.value * count.value):
             s.memory.write_byte(s, ptr + i, zero)
 
-    print('{} {} calloc(size={}, count={}); [{:x}]'.format(
-        s.id, f.return_address(), size, count, ptr))
+    s.log.function_call(f, 'calloc(size={}, count={}) [{:x}]', size, count, ptr)
 
     return f.ret(value=ptr)
 
@@ -325,8 +316,7 @@ def exit(s, cc):
 
     status = f.params[0]
 
-    print('{} {} exit(status={})'.format(
-        s.id, f.return_address(), status))
+    s.log.function_call(f, 'exit(status={})', status)
 
     return []
 
@@ -341,8 +331,7 @@ def free(s, cc):
     else:
         s.memory.free(s, ptr.value)
 
-    print('{} {} free(ptr={})'.format(
-        s.id, f.return_address(), ptr))
+    s.log.function_call(f, 'free(ptr={})', ptr)
 
     return f.ret(value=0)
 
@@ -381,8 +370,50 @@ def malloc(s, cc):
         f_ = cc(s_)
         ss += f_.ret(value=ptr)
 
-        print('{} {} malloc(size={}); [{:x}]'.format(
-            s_.id, f_.return_address(), size_, ptr))
+        s_.log.function_call(f, 'malloc(size={}) [{:x}]', size_, ptr)
+
+    return ss
+
+
+def realloc(s, cc):
+    f = cc(s)
+
+    ptr = f.params[0]
+    size = f.params[1]
+
+    if ptr.symbolic:
+        raise NotImplementedError()
+
+    ss = []
+    sizes = []
+    if size.symbolic:
+        min_size = minimum(s, size)
+        max_size = maximum(s, size)
+
+        sizes.append(min_size.value)
+
+        if min_size != max_size:
+            sizes.append(max_size.value)
+    else:
+        sizes.append(size.value)
+
+    ss = []
+    total_sizes = len(sizes)
+    while len(sizes) > 0:
+        size_ = sizes.pop()
+
+        if total_sizes > 1:
+            s_ = s.fork()
+        else:
+            s_ = s
+
+        s_.solver.add(size == bv.Constant(size.size, size_))
+        ptr_ = s_.memory.reallocate(s_, ptr.value, size_)
+
+        f_ = cc(s_)
+        ss += f_.ret(value=ptr_)
+
+        s_.log.function_call(f, 'realloc(ptr={}, size={}) [{:x}]', ptr, size_, ptr_)
 
     return ss
 
@@ -399,8 +430,7 @@ def memchr(s, cc):
     if num.symbolic:
         num = maximum(s, num)
 
-    print('{} {} memchr(ptr={}, value={}, num={})'.format(
-        s.id, f.return_address(), ptr, value, num))
+    s.log.function_call(f, 'memchr(ptr={}, value={}, num={})', ptr, value, num)
 
     if ptr.symbolic:
         ptrs = concretise(s, ptr)
@@ -479,8 +509,7 @@ def memcmp(s, cc):
     ptr2 = f.params[1]
     num = f.params[2]
 
-    print('{} {} memcmp(ptr1={}, ptr2={}, num={})'.format(
-        s.id, f.return_address(), ptr1, ptr2, num))
+    s.log.function_call(f, 'memcmp(ptr1={}, ptr2={}, num={})', ptr1, ptr2, num)
 
     count = 0
 
@@ -558,8 +587,7 @@ def memset(s, cc):
     if count.symbolic:
         count = maximum(s, count)
 
-    print ('{} {} memset(dst={}, val={}, count={});'.format(
-        s.id, f.return_address(), dst, val, count))
+    s.log.function_call(f, 'memset(dst={}, val={}, count={})', dst, val, count)
 
     for i in xrange(0, count.value):
         output.append(val)
@@ -573,8 +601,7 @@ def strcmp(s, cc):
     str1 = f.params[0]
     str2 = f.params[1]
 
-    print ('{} {} strcmp(str1={}, str2={})'.format(
-        s.id, f.return_address(), str1, str2))
+    s.log.function_call(f, 'strcmp(str1={}, str2={})', str1, str2)
 
     iter1 = iter(String(s, str1))
     iter2 = iter(String(s, str2))
@@ -666,6 +693,7 @@ def register_hooks(s, cc):
     register_hook('exit', exit)
     register_hook('free', free)
     register_hook('malloc', malloc)
+    register_hook('realloc', realloc)
 
     # string.h
     register_hook('memchr', memchr)

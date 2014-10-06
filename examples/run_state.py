@@ -17,7 +17,9 @@
 #    limitations under the License.
 
 import argparse
+import logging
 
+from concolica import log
 from concolica import serialisation
 from concolica import threaded
 
@@ -25,6 +27,20 @@ from concolica.library_emulation import calling_conventions
 from concolica.library_emulation import libc
 from concolica.library_emulation import unix
 from concolica.syscall_emulation import linux
+
+
+logger = logging.getLogger('concolica')
+logger.setLevel(logging.INFO)
+
+fh = logging.FileHandler('concolica.log')
+fh.setLevel(log.REIL_REGISTERS)
+logger.addHandler(fh)
+
+ch = logging.StreamHandler()
+ch.setLevel(log.NATIVE_INSTRUCTION)
+ch.setFormatter(log.Formatter('%(message)s'))
+logger.addHandler(ch)
+
 
 class CoverageScoringFunction(object):
 
@@ -44,6 +60,7 @@ class CoverageScoringFunction(object):
         score = (self.max_score - (self.hit_count[ip] * 0x1000000000000000))
         score = score | ip
         return score
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -66,10 +83,13 @@ if __name__ == '__main__':
         libc.register_hooks(state, calling_conventions.Amd64SysV)
         unix.register_hooks(state, calling_conventions.Amd64SysV)
 
+    state.log = log.StateLogger(state)
+
     #import pdb
     #pdb.set_trace()
 
     print 'about to run'
 
-    threaded.run_single_threaded([state], x86_64, CoverageScoringFunction())
+    for v in threaded.run_single_threaded([state], x86_64, CoverageScoringFunction()):
+        print v
 

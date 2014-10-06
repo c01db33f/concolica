@@ -135,6 +135,17 @@ class DynamicMemory(object):
         del self._heap_blocks[ptr]
 
 
+    def reallocate(self, state, ptr, size):
+
+        old_size = self._heap_blocks[ptr]
+        new_ptr = self.allocate(state, size)
+        for i in range(0, min(old_size, size)):
+            self.write_byte(state, new_ptr + i, self.read_byte(state, ptr + i))
+
+        self.free(state, ptr)
+        return new_ptr
+
+
     def depth(self):
         d = 0
         p = self._parent

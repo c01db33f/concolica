@@ -20,6 +20,7 @@ import itertools
 import re
 
 from concolica import interlocked
+from concolica import log
 from concolica import memory
 from concolica.utils import *
 from concolica.vulnerabilities import *
@@ -43,12 +44,12 @@ class Registers(dict):
 
 
     def dirty(self):
-        return self.depth() == 0 or len(self) > 0 #._registers) > 0
+        return self.depth() == 0 or len(self) > 0
 
 
     def __getstate__(self):
         self.flatten()
-        return dict(self) #._registers
+        return dict(self)
 
 
     def __setstate__(self, dict):
@@ -68,7 +69,6 @@ class Registers(dict):
 
     def __missing__(self, key):
         if self._parent is None:
-            print 'missing the badger: {}'.format(key)
             raise KeyError()
 
         return self._parent[key]
@@ -79,9 +79,9 @@ class Registers(dict):
         # TODO: this is *insanely* lazy and inefficient
 
         il_register_re = re.compile('^t\d+$')
-        for r in self.keys(): #._registers:
+        for r in self.keys():
             if il_register_re.match(r):
-                del self[r] #._registers[r]
+                del self[r]
 
 
     def depth(self):
@@ -100,18 +100,13 @@ class Registers(dict):
         p = self._parent
 
         while p is not None:
-            cs.append(p) #._registers)
+            cs.append(p)
             p = p._parent
 
         cs.reverse()
 
-
-        #print 'flattening'
-        #print cs
         for c in cs:
-            self.update(c) #._registers.update(c)
-
-        #print self.keys() #_registers.keys()
+            self.update(c)
 
         self._parent = p
 
@@ -125,6 +120,8 @@ class State(object):
         self.id = 0
         self.parent = parent
         self.score = 0
+
+        self.log = log.StateLogger(self)
 
         if parent:
             self.ip = parent.ip
@@ -185,20 +182,12 @@ class State(object):
     def fork(self):
         new = None
 
-        #if self.registers.dirty() or self.memory.dirty():
-            # we are substantively different to parent
-
         new = State(self)
         if self.id == 0:
             new.id = State._state_id.increment()
         else:
             new.id = self.id
             self.id = 0
-
-        #else:
-        #    new = State(self.parent)
-        #    new.ip = self.ip
-        #    new.il_index = self.il_index
 
         return new
 

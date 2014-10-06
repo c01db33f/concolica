@@ -25,8 +25,7 @@ def sys_brk(s, cc):
 
     brk = f.params[0]
 
-    print('{} {} sys_brk({})'.format(
-        s.id, f.return_address(), brk))
+    s.log.syscall(f, 'sys_brk({})', brk)
 
     if brk.value == 0:
         ptr = s.memory.allocate(0x10000)
@@ -43,8 +42,7 @@ def sys_chdir(s, cc):
     o.append_string(String(s, filename))
     filename = o.string
 
-    print('{} {} sys_chdir({})'.format(
-        s.id, f.return_address(), filename))
+    s.log.syscall(f, 'sys_chdir({})', filename)
 
     return f.ret(value='sys_chdir')
 
@@ -54,8 +52,7 @@ def sys_close(s, cc):
 
     fd = f.params[0]
 
-    print('{} {} sys_close({})'.format(
-        s.id, f.return_address(), fd))
+    s.log.syscall(f, 'sys_close({})', fd)
 
     if fd.symbolic:
         raise NotImplementedError()
@@ -70,8 +67,7 @@ def sys_exit(s, cc):
 
     arg0 = f.params[0]
 
-    print('{} {} sys_exit({})'.format(
-        s.id, f.return_address(), arg0))
+    s.log.syscall(f, 'sys_exit({})', arg0)
 
     return []
 
@@ -81,8 +77,7 @@ def sys_exit_group(s, cc):
 
     arg0 = f.params[0]
 
-    print('{} {} sys_exit_group({})'.format(
-        s.id, f.return_address(), arg0))
+    s.log.syscall(f, 'sys_exit_group({})', arg0)
 
     return []
 
@@ -130,8 +125,7 @@ def sys_fcntl(s, cc):
     elif cmd.value == 17:
         cmd = 'F_GETOWNER_UIDS'
 
-    print('{} {} sys_fcntl(fd={}, cmd={}, ...)'.format(
-        s.id, f.return_address(), fd, cmd))
+    s.log.syscall(f, 'sys_fcntl(fd={}, cmd={}, ...)', fd, cmd)
 
     return f.ret(value='sys_fcntl')
 
@@ -142,8 +136,7 @@ def sys_fstat(s, cc):
     fd = f.params[0]
     statbuf = f.params[1]
 
-    print('{} {} sys_fstat(fd={}, statbuf={})'.format(
-        s.id, f.return_address(), fd, statbuf))
+    s.log.syscall(f, 'sys_fstat(fd={}, statbuf={})', fd, statbuf)
 
     o = OutputBuffer(s, statbuf)
     for i in range(0, 64): # sizeof(struct stat) == 64
@@ -158,8 +151,7 @@ def sys_fstat64(s, cc):
     fd = f.params[0]
     statbuf = f.params[1]
 
-    print('{} {} sys_fstat64(fd={}, statbuf={})'.format(
-        s.id, f.return_address(), fd, statbuf))
+    s.log.syscall(f, 'sys_fstat64(fd={}, statbuf={})', fd, statbuf)
 
     o = OutputBuffer(s, statbuf)
     if not fd.symbolic and fd.value == 1:
@@ -181,8 +173,7 @@ def sys_futex(s, cc):
     utime = f.params[3]
     uaddr2 = f.params[4]
 
-    print('{} {} sys_futex(uaddr={}, op={}, val={}, utime={}, uaddr2={})'.format(
-        s.id, f.return_address(), uaddr, op, val, utime, uaddr2))
+    s.log.syscall(f, 'sys_futex(uaddr={}, op={}, val={}, utime={}, uaddr2={})', uaddr, op, val, utime, uaddr2)
 
     return f.ret(value='sys_futex')
 
@@ -194,8 +185,7 @@ def sys_ioctl(s, cc):
     cmd = f.params[1]
     arg = f.params[2]
 
-    print('{} {} sys_ioctl(fd={}, cmd={}, arg={})'.format(
-        s.id, f.return_address(), fd, cmd, arg))
+    s.log.syscall(f, 'sys_ioctl(fd={}, cmd={}, arg={})', fd, cmd, arg)
 
     return f.ret(value='sys_ioctl')
 
@@ -218,8 +208,7 @@ def sys_lseek(s, cc):
     elif origin.value == 4:
         origin = 'SEEK_HOLE'
 
-    print('{} {} sys_lseek(fd={}, offset={}, origin={}'.format(
-        s.id, f.return_address(), fd, offset, origin))
+    s.log.syscall(f, 'sys_lseek(fd={}, offset={}, origin={}', fd, offset, origin)
 
     return f.ret(value=0)
 
@@ -234,8 +223,8 @@ def sys_mmap(s, cc):
     fd = f.params[4]
     offset = f.params[5]
 
-    print('{} {} sys_mmap(addr={}, length={}, prot={}, flags={}, fd={}, offset={})'.format(
-        s.id, f.return_address(), addr, length, prot, flags, fd, offset))
+    s.log.syscall(f, 'sys_mmap(addr={}, length={}, prot={}, flags={}, fd={}, offset={})',
+                  addr, length, prot, flags, fd, offset)
 
     if length.symbolic:
         raise NotImplementedError()
@@ -255,8 +244,8 @@ def sys_mmap_pgoff(s, cc):
     fd = f.params[4]
     offset = f.params[5]
 
-    print('{} {} sys_mmap_pgoff(file={}, addr={}, length={}, prot={}, flags={}, offset={})'.format(
-        s.id, f.return_address(), addr, length, prot, flags, fd, offset))
+    s.log.syscall(f, 'sys_mmap_pgoff(file={}, addr={}, length={}, prot={}, flags={}, offset={})',
+                  addr, length, prot, flags, fd, offset)
 
     ptr = bv.Constant(addr.size, s.memory.allocate(length))
 
@@ -276,8 +265,7 @@ def sys_open(s, cc):
     o.append_string(String(s, path))
     path = o.string[:-1]
 
-    print('{} {} sys_open(path="{}", flags={}, mode={});'.format(
-        s.id, f.return_address(), path, flags, mode))
+    s.log.syscall(f, 'sys_open(path="{}", flags={}, mode={})', path, flags, mode)
 
     file_id = len(s.files) + 1
 
@@ -296,8 +284,7 @@ def sys_open(s, cc):
 def sys_ptrace(s, cc):
     f = cc(s)
 
-    print('{} {} sys_ptrace()'.format(
-        s.id, f.return_address()))
+    s.log.syscall(f, 'sys_ptrace()')
 
     return f.ret(value='sys_ptrace')
 
@@ -309,8 +296,7 @@ def sys_read(s, cc):
     buf = f.params[1]
     size = f.params[2]
 
-    print('{} {} sys_read(fd={}, ptr={}, size={});'.format(
-        s.id, f.return_address(), fd, buf, size))
+    s.log.syscall(f, 'sys_read(fd={}, ptr={}, size={})', fd, buf, size)
 
     output = OutputBuffer(s, buf)
 
@@ -365,8 +351,7 @@ def sys_setgroups(s, cc):
     size = f.params[0]
     list = f.params[1]
 
-    print('{} {} sys_setgroups(size={}, list={})'.format(
-        s.id, f.return_address(), size, list))
+    s.log.syscall(f, 'sys_setgroups(size={}, list={})', size, list)
 
     return f.ret(value=0)
 
@@ -378,8 +363,7 @@ def sys_setresgid(s, cc):
     egid = f.params[1]
     sgid = f.params[2]
 
-    print('{} {} sys_setresgid(rgid={}, egid={}, sgid={})'.format(
-        s.id, f.return_address(), rgid, egid, sgid))
+    s.log.syscall(f, 'sys_setresgid(rgid={}, egid={}, sgid={})', rgid, egid, sgid)
 
     return f.ret(value=0)
 
@@ -391,21 +375,19 @@ def sys_setresuid(s, cc):
     euid = f.params[1]
     suid = f.params[2]
 
-    print('{} {} sys_setresuid(ruid={}, euid={}, suid={})'.format(
-        s.id, f.return_address(), ruid, euid, suid))
+    s.log.syscall(f, 'sys_setresuid(ruid={}, euid={}, suid={})', ruid, euid, suid)
 
     return f.ret(value=0)
 
 
 def sys_write(s, cc):
-    function = cc(s)
+    f = cc(s)
 
-    fd = function.params[0]
-    buf = function.params[1]
-    size = function.params[2]
+    fd = f.params[0]
+    buf = f.params[1]
+    size = f.params[2]
 
-    print('{} {} sys_write(fd={}, buf={}, size={})'.format(
-        s.id, function.return_address(), fd, buf, size))
+    s.log.syscall(f, 'sys_write(fd={}, buf={}, size={})', fd, buf, size)
 
     o = DummyOutputBuffer()
 
@@ -416,16 +398,15 @@ def sys_write(s, cc):
             o.append(s.read(buf + bv.Constant(buf.size, i), 8))
 
     output_string = o.string.strip('\r').strip('\n')
-    print('{}: '.format(s.id) + colored(output_string, 'green'))
+    s.log.output(output_string)
 
-    return function.ret(value=bv.Constant(size.size, o.index))
+    return f.ret(value=bv.Constant(size.size, o.index))
 
 
 def sys_unknown(s, number, cc):
-    function = cc(s)
+    f = cc(s)
 
-    print '{} {} sys_unknown({})'.format(
-        s.id, function.return_address(), number)
+    s.log.syscall(f, 'sys_unknown({})', number)
 
     return []
 
