@@ -17,13 +17,8 @@
 
 import threading
 
-import argparse
-import functools
-import os
+import logging
 import random
-import shlex
-import struct
-import subprocess
 import time
 
 from termcolor import colored
@@ -31,10 +26,12 @@ from termcolor import colored
 from concolica import emulator
 from concolica import interlocked
 from concolica import serialisation
-from concolica import state
 from concolica.vulnerabilities import *
 
 import smt.bitvector as bv
+
+
+_log = logging.getLogger('concolica')
 
 max_threads = 24
 active_threads = threading.BoundedSemaphore(max_threads)
@@ -58,7 +55,9 @@ def run_single_threaded(initial_states, x86_64, scoring_function=None):
                 else:
                     states.append(n)
         except StateException, v:
+            v.state.log.vulnerability(v)
             yield v
+
 
 def run_threaded(initial_states, x86_64, scoring_function=None):
     global active_threads
@@ -87,8 +86,8 @@ def run_threaded(initial_states, x86_64, scoring_function=None):
 
                         available_states.release()
                 except StateException, v:
-                    print colored(v, 'white', 'on_red', attrs=['bold'])
-                    print 'saving vuln state {}'.format(v.state.id)
+                    v.state.log.vulnerability(v)
+                    v.state.log.debug('saving vuln state {}'.format(v.state.id))
                     serialisation.save('vuln_state_{}'.format(v.state.id), v)
                     data = ''
 
@@ -111,7 +110,6 @@ def run_threaded(initial_states, x86_64, scoring_function=None):
             active_threads.release()
             time.sleep(1.0)
 
-
     workers = []
     for i in range(0, max_threads):
         t = threading.Thread(target=run, args=(states,))
@@ -122,14 +120,18 @@ def run_threaded(initial_states, x86_64, scoring_function=None):
     try:
         while not exit_event.is_set():
             time.sleep(1)
+
+            # shut up pycharm I know I am a bad man
             idle_count = active_threads._Semaphore__value
-            print 'idle threads: {}'.format(idle_count)
+
+            _log.debug('idle threads: {}'.format(idle_count))
             if idle_count == max_threads:
                 all_idle_count += 1
                 if all_idle_count == 3:
                     exit_event.set()
             else:
                 all_idle_count = 0
+
     except KeyboardInterrupt:
         exit_event.set()
 

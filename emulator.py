@@ -15,12 +15,8 @@
 #    limitations under the License.
 
 
-from termcolor import colored
-
 import reil
 import reil.x86.translator as x86
-
-import smt.bitvector as bv
 
 from concolica.utils import *
 from concolica.vulnerabilities import *
@@ -44,8 +40,6 @@ def op_add(i, s):
     b = operand_value(s, i.input1)
     dst = i.output
 
-    value = None
-
     operation_size = max(a.size, b.size, dst.size)
 
     a = a.resize(operation_size)
@@ -62,8 +56,6 @@ def op_and(i, s):
     a = operand_value(s, i.input0)
     b = operand_value(s, i.input1)
     dst = i.output
-
-    value = None
 
     operation_size = max(a.size, b.size, dst.size)
 
@@ -95,14 +87,13 @@ def op_bsh(i, s):
     b = operand_value(s, i.input1)
     dst = i.output
 
-    value = None
-
     operation_size = max(a.size, b.size, dst.size)
 
     a = a.resize(operation_size)
     b = b.resize(operation_size)
 
     # TODO: support symbolic shifts
+
     if b.value >= 0:
         result = a << b
     else:
@@ -117,8 +108,6 @@ def op_div(i, s):
     a = operand_value(s, i.input0)
     b = operand_value(s, i.input1)
     dst = i.output
-
-    value = None
 
     operation_size = max(a.size, b.size, dst.size)
 
@@ -140,7 +129,6 @@ def op_jcc(i, s):
     branch = a.can_be_nonzero()
     dont_branch = a.can_be_zero()
 
-    new = None
     if s.solver.check(branch):
         if s.solver.check(dont_branch):
             # we take both options, current state doesn't branch
@@ -178,8 +166,6 @@ def op_mod(i, s):
     b = operand_value(s, i.input1)
     dst = i.output
 
-    value = None
-
     operation_size = max(a.size, b.size, dst.size)
 
     a = a.resize(operation_size)
@@ -196,8 +182,6 @@ def op_mul(i, s):
     a = operand_value(s, i.input0)
     b = operand_value(s, i.input1)
     dst = i.output
-
-    value = None
 
     operation_size = max(a.size, b.size, dst.size)
 
@@ -219,8 +203,6 @@ def op_or(i, s):
     a = operand_value(s, i.input0)
     b = operand_value(s, i.input1)
     dst = i.output
-
-    value = None
 
     operation_size = max(a.size, b.size, dst.size)
 
@@ -257,8 +239,6 @@ def op_sub(i, s):
     b = operand_value(s, i.input1)
     dst = i.output
 
-    value = None
-
     operation_size = max(a.size, b.size, dst.size)
 
     a = a.resize(operation_size)
@@ -287,8 +267,6 @@ def op_xor(i, s):
     b = operand_value(s, i.input1)
     dst = i.output
 
-    value = None
-
     operation_size = max(a.size, b.size, dst.size)
 
     a = a.resize(operation_size)
@@ -308,9 +286,9 @@ def op_bisnz(i, s):
     dst = i.output
 
     result = bv.if_then_else(
-                a != bv.Constant(a.size, 0),
-                bv.Constant(dst.size, 1),
-                bv.Constant(dst.size, 0))
+        a != bv.Constant(a.size, 0),
+        bv.Constant(dst.size, 1),
+        bv.Constant(dst.size, 0))
 
     s.registers[dst.name] = result
     return [s]
@@ -335,8 +313,6 @@ def op_lshl(i, s):
     b = operand_value(s, i.input1)
     dst = i.output
 
-    value = None
-
     operation_size = max(a.size, b.size, dst.size)
 
     a = a.resize(operation_size)
@@ -354,8 +330,6 @@ def op_lshr(i, s):
     b = operand_value(s, i.input1)
     dst = i.output
 
-    value = None
-
     operation_size = max(a.size, b.size, dst.size)
 
     a = a.resize(operation_size)
@@ -372,8 +346,6 @@ def op_ashr(i, s):
     a = operand_value(s, i.input0)
     b = operand_value(s, i.input1)
     dst = i.output
-
-    value = None
 
     operation_size = max(a.size, b.size, dst.size)
 
@@ -401,31 +373,31 @@ def op_sys(i, s):
     return s.kernel.dispatch(s, i)
 
 opcode_map = {
-    reil.ADD:  op_add,
-    reil.AND:  op_and,
-    reil.BISZ: op_bisz,
-    reil.BSH:  op_bsh,
-    reil.DIV:  op_div,
-    reil.JCC:  op_jcc,
-    reil.LDM:  op_ldm,
-    reil.MOD:  op_mod,
-    reil.MUL:  op_mul,
-    reil.NOP:  op_nop,
-    reil.OR:   op_or,
-    reil.STM:  op_stm,
-    reil.STR:  op_str,
-    reil.SUB:  op_sub,
-    reil.UNDEF:op_undef,
-    reil.UNKN: op_unkn,
-    reil.XOR:  op_xor,
+    reil.ADD:   op_add,
+    reil.AND:   op_and,
+    reil.BISZ:  op_bisz,
+    reil.BSH:   op_bsh,
+    reil.DIV:   op_div,
+    reil.JCC:   op_jcc,
+    reil.LDM:   op_ldm,
+    reil.MOD:   op_mod,
+    reil.MUL:   op_mul,
+    reil.NOP:   op_nop,
+    reil.OR:    op_or,
+    reil.STM:   op_stm,
+    reil.STR:   op_str,
+    reil.SUB:   op_sub,
+    reil.UNDEF: op_undef,
+    reil.UNKN:  op_unkn,
+    reil.XOR:   op_xor,
 
-    reil.BISNZ:op_bisnz,
-    reil.EQU:  op_equ,
-    reil.LSHL: op_lshl,
-    reil.LSHR: op_lshr,
-    reil.ASHR: op_ashr,
-    reil.SEX:  op_sex,
-    reil.SYS:  op_sys,
+    reil.BISNZ: op_bisnz,
+    reil.EQU:   op_equ,
+    reil.LSHL:  op_lshl,
+    reil.LSHR:  op_lshr,
+    reil.ASHR:  op_ashr,
+    reil.SEX:   op_sex,
+    reil.SYS:   op_sys,
 }
 
 
@@ -434,21 +406,24 @@ def reil_single_step(ri, s):
 
 
 _translation_cache = dict()
+_hit_count = dict()
+
+
 def fetch_instruction(s, x86_64=False):
     ip = s.ip
     s.trace.append(ip)
 
     if ip not in _translation_cache:
-        bytes = []
+        bs = []
 
         for i in range(0, 128):
             try:
-                bytes.append(s.memory.read_byte(s, ip + i))
-            except:
+                bs.append(s.memory.read_byte(s, ip + i))
+            except IndexError():
                 break
 
-        bytes = ''.join(map(lambda x:chr(x.value), bytes))
-        for i in x86.translate(bytes, ip, x86_64):
+        bs = ''.join(map(lambda x: chr(x.value), bs))
+        for i in x86.translate(bs, ip, x86_64):
             _translation_cache[i.address] = i
 
     if ip not in _translation_cache:
@@ -463,19 +438,17 @@ def fetch_instruction(s, x86_64=False):
     return i
 
 
-hit_count = dict()
 def single_step(s, x86_64=False):
     i = fetch_instruction(s, x86_64)
     if i is None:
         return []
 
-    if i.address in hit_count:
-        hc = hit_count[i.address] = hit_count[i.address] + 1
+    # yes, this is not thread-safe. it should only be used for something like
+    # selecting best path though, so it doesn't really matter/is fuzzy anyway.
+    if i.address in _hit_count:
+        hc = _hit_count[i.address] = _hit_count[i.address] + 1
     else:
-        hc = hit_count[i.address] = 1
-
-    step_output = ''
-    #step_output += '\n'
+        hc = _hit_count[i.address] = 1
 
     if i.address in s.symbols:
         symbol = s.symbols[i.address]
@@ -485,7 +458,7 @@ def single_step(s, x86_64=False):
 
                 # any state needing more than 60 seconds in it's last solver
                 # invocation needs to be concretised.
-                if s.solver.solve_time() > 15:
+                if s.solver.solve_time() > 1:
                     s.log.warning('concretising (last solve took: {}s)', s.solver.solve_time)
                     s.solver.concretise()
 
@@ -510,8 +483,9 @@ def single_step(s, x86_64=False):
 
             # any state needing more than 60 seconds in it's last solver
             # invocation needs to be concretised.
-            if s.solver.solve_time() > 15:
-                s.log.warning('concretising (last solve took: {}s)', s.solver.solve_time)
+            s.log.warning('last solve took: {}s'.format(s.solver.solve_time()))
+            if s.solver.solve_time() > 1:
+                s.log.warning('concretising (last solve took: {}s)'.format(s.solver.solve_time()))
                 s.solver.concretise()
 
             # remove temporary registers
@@ -526,8 +500,5 @@ def single_step(s, x86_64=False):
         s.log.reil_instruction(ri)
 
         states += reil_single_step(ri, s)
-
-    if len(step_output) > 0:
-        print step_output.rstrip('\n')
 
     return exit_states

@@ -158,7 +158,7 @@ def register_dump(s, x86_64=False):
         return x86_register_dump(s)
 
 
-
+VULNERABILITY = 41
 OUTPUT = 28
 SYSCALL = 27
 FUNCTION_CALL = 26
@@ -171,6 +171,7 @@ REIL_REGISTERS = 22
 class Formatter(logging.Formatter):
 
     color_map = {
+        VULNERABILITY:['white', 'on_red'],
         OUTPUT:['white'],
         SYSCALL:['blue'],
         FUNCTION_CALL:['blue'],
@@ -178,10 +179,8 @@ class Formatter(logging.Formatter):
         REIL_INSTRUCTION:['magenta']
     }
 
-
     def __init__(self, fmt, datefmt=None):
         logging.Formatter.__init__(self, fmt, datefmt)
-
 
     def format(self, record):
         message = logging.Formatter.format(self, record)
@@ -197,6 +196,10 @@ class StateLogger(logging.LoggerAdapter):
     def __init__(self, state):
         logging.LoggerAdapter.__init__(self, logging.getLogger('concolica'), {'state':state.id})
         self.state = state
+
+    def vulnerability(self, v):
+        self.log(VULNERABILITY,
+                 '{:5} {}'.format(self.state.id, v))
 
     def output(self, msg):
         self.log(OUTPUT, msg)
