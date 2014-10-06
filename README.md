@@ -29,9 +29,11 @@ git clone https://github.com/aquynh/capstone.git
 cd capstone
 ./make.sh
 sudo ./make.sh install
-cd ../
+cd bindings/python
+sudo python ./setup.py install
+cd ../../../
 
-sudo pip install capstone termcolor
+sudo pip install termcolor
 
 git clone https://git01.codeplex.com/z3
 cd z3
