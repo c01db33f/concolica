@@ -35,7 +35,6 @@ class StaticMemory(object):
         self._cache = dict()
         self._pages = []
 
-
     def add_mapping(self, base, data):
         limit = base + len(data)
         for b, l, d in self._pages:
@@ -46,7 +45,6 @@ class StaticMemory(object):
 
         self._pages.append((base, limit, data))
 
-
     def is_mapped(self, state, address):
 
         for b, l, d in self._pages:
@@ -54,7 +52,6 @@ class StaticMemory(object):
                 return True
 
         return False
-
 
     def read_byte(self, state, address):
 
@@ -79,7 +76,6 @@ class DynamicMemory(object):
 
     __slots__ = ('_cache', '_parent', '_heap_next', '_heap_blocks', '_heap_free')
 
-
     def __init__(self, parent):
         self._cache = dict()
         self._parent = parent
@@ -96,23 +92,19 @@ class DynamicMemory(object):
         if self.depth() > 8:
             self.flatten()
 
-
     def dirty(self):
         return self.depth() == 0 or len(self._cache) > 0
 
-
     def __getstate__(self):
         self.flatten()
-        return (self._cache, self._parent, self._heap_next, self._heap_blocks, self._heap_free)
+        return self._cache, self._parent, self._heap_next, self._heap_blocks, self._heap_free
 
-
-    def __setstate__(self, dict):
-        self._cache = dict[0]
-        self._parent = dict[1]
-        self._heap_next = dict[2]
-        self._heap_blocks = dict[3]
-        self._heap_free = dict[4]
-
+    def __setstate__(self, d):
+        self._cache = d[0]
+        self._parent = d[1]
+        self._heap_next = d[2]
+        self._heap_blocks = d[3]
+        self._heap_free = d[4]
 
     def allocate(self, state, size):
 
@@ -125,7 +117,6 @@ class DynamicMemory(object):
         self._heap_next += ((size // 0x1000) + 1) * 0x1000
         return ptr
 
-
     def free(self, state, ptr):
         size = self._heap_blocks[ptr]
         for i in range(0, size):
@@ -134,9 +125,7 @@ class DynamicMemory(object):
         self._heap_free[ptr] = size
         del self._heap_blocks[ptr]
 
-
     def reallocate(self, state, ptr, size):
-
         old_size = self._heap_blocks[ptr]
         new_ptr = self.allocate(state, size)
         for i in range(0, min(old_size, size)):
@@ -144,7 +133,6 @@ class DynamicMemory(object):
 
         self.free(state, ptr)
         return new_ptr
-
 
     def depth(self):
         d = 0
@@ -155,7 +143,6 @@ class DynamicMemory(object):
             p = p._parent
 
         return d
-
 
     def flatten(self):
         cs = []
@@ -172,9 +159,7 @@ class DynamicMemory(object):
 
         self._parent = p
 
-
     def is_mapped(self, state, address):
-
         if address in self._cache:
             return True
 
@@ -184,20 +169,14 @@ class DynamicMemory(object):
 
         return self._parent.is_mapped(state, address)
 
-
     def read_byte(self, state, address):
-
         try:
             return self._cache[address]
-
         except KeyError:
             return self._parent.read_byte(state, address)
 
-
     def write_byte(self, state, address, value):
-
         if self.is_mapped(state, address):
             self._cache[address] = value
-
         else:
             state.throw(InvalidWrite(state, address, value))

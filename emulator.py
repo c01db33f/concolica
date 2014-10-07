@@ -483,7 +483,6 @@ def single_step(s, x86_64=False):
 
             # any state needing more than 60 seconds in it's last solver
             # invocation needs to be concretised.
-            s.log.warning('last solve took: {}s'.format(s.solver.solve_time()))
             if s.solver.solve_time() > 1:
                 s.log.warning('concretising (last solve took: {}s)'.format(s.solver.solve_time()))
                 s.solver.concretise()

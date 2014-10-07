@@ -131,12 +131,12 @@ def x86_64_register_dump(s):
             output += '{0}:                    '.format(r)
     output += '\n'
 
-    #for r in ['xmm0', 'xmm1', 'xmm2', 'xmm3', 'xmm4', 'xmm5', 'xmm6', 'xmm7', 'xmm8', 'xmm9', 'xmm10', 'xmm11', 'xmm12', 'xmm13', 'xmm14', 'xmm15']:
-    #    if r in s.registers:
-    #        if s.registers[r].symbolic:
-    #            output += '{0}: symbolic\n'.format(r)
-    #        else:
-    #            output += '{0}: {1}\n'.format(r, s.registers[r])
+   # for r in ['xmm0', 'xmm1', 'xmm2', 'xmm3', 'xmm4', 'xmm5', 'xmm6', 'xmm7', 'xmm8', 'xmm9', 'xmm10', 'xmm11', 'xmm12', 'xmm13', 'xmm14', 'xmm15']:
+   #     if r in s.registers:
+   #         if s.registers[r].symbolic:
+   #             output += '{0}: symbolic\n'.format(r)
+   #         else:
+   #             output += '{0}: {1}\n'.format(r, s.registers[r])
 
     for r in ['cf', 'pf', 'af', 'zf', 'sf', 'df', 'of']:
         if r in s.registers and s.registers[r] is not None:
@@ -162,10 +162,11 @@ VULNERABILITY = 41
 OUTPUT = 28
 SYSCALL = 27
 FUNCTION_CALL = 26
-NATIVE_INSTRUCTION = 25
-NATIVE_REGISTERS = 24
-REIL_INSTRUCTION = 23
-REIL_REGISTERS = 22
+FORKING = 25
+NATIVE_INSTRUCTION = 24
+NATIVE_REGISTERS = 23
+REIL_INSTRUCTION = 22
+REIL_REGISTERS = 21
 
 
 class Formatter(logging.Formatter):
@@ -194,7 +195,7 @@ class Formatter(logging.Formatter):
 class StateLogger(logging.LoggerAdapter):
 
     def __init__(self, state):
-        logging.LoggerAdapter.__init__(self, logging.getLogger('concolica'), {'state':state.id})
+        logging.LoggerAdapter.__init__(self, logging.getLogger('concolica'), {'state': state.id})
         self.state = state
 
     def vulnerability(self, v):
@@ -211,10 +212,10 @@ class StateLogger(logging.LoggerAdapter):
     def function_call(self, f, msg, *args):
         if f is not None:
             self.log(FUNCTION_CALL,
-                 '{:5} {} {}'.format(self.state.id, f.return_address(), msg.format(*args)))
+                     '{:5} {} {}'.format(self.state.id, f.return_address(), msg.format(*args)))
         else:
             self.log(FUNCTION_CALL,
-                 '{:5} {}'.format(self.state.id, msg.format(*args)))
+                     '{:5} {}'.format(self.state.id, msg.format(*args)))
 
     def native_instruction(self, hc, i, x86_64):
         self.log(NATIVE_REGISTERS,
@@ -229,3 +230,6 @@ class StateLogger(logging.LoggerAdapter):
 
         self.log(REIL_INSTRUCTION,
                  '{:5} {:4} {}'.format(self.state.id, self.state.il_index-1, i))
+
+    def fork(self, id):
+        self.log(FORKING, '{:5} forking {}'.format(self.state.id, id))

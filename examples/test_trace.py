@@ -1,6 +1,7 @@
 #! /usr/bin/python2
 
 from concolica import emulator
+from concolica import log
 from concolica import memory
 from concolica import state
 from concolica.syscall_emulation import linux
@@ -8,9 +9,16 @@ from concolica.syscall_emulation import linux
 from smt import bitvector as bv
 
 import argparse
-import os
-import pickle
-import traceback
+import cPickle as pickle
+import logging
+
+logger = logging.getLogger('concolica')
+logger.setLevel(logging.INFO)
+
+ch = logging.StreamHandler()
+ch.setLevel(log.REIL_REGISTERS)
+ch.setFormatter(log.Formatter('%(message)s'))
+logger.addHandler(ch)
 
 
 def x86_validate(s, t):
@@ -153,7 +161,7 @@ if __name__ == '__main__':
         assert len(states) == 1
         if not validate(s, trace_data['trace'][i], x86_64):
             print 'VALIDATION FAILED SHIT SHIT SHIT SHIT'
-            if s.ip != 0x7ffff7b3756d:
+            if s.ip != 0x7f52036ca145:
                 import sys
                 sys.exit(0)
 

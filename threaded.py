@@ -39,15 +39,19 @@ available_states = threading.Semaphore(0)
 exit_event = threading.Event()
 
 
-def run_single_threaded(initial_states, x86_64, scoring_function=None):
+def run_single_threaded(initial_states, x86_64, scoring_function=None, culling_function=None):
 
     states = list(initial_states)
 
     while len(states) > 0:
         try:
-            s = states.pop(random.randint(0, len(states) - 1))
+            s = states.pop()
             ns = emulator.single_step(s, x86_64)
             for n in ns:
+                if culling_function is not None:
+                    if culling_function(n):
+                        continue
+
                 if scoring_function is not None:
                     n.score = scoring_function(n)
                     states.append(n)
@@ -59,7 +63,7 @@ def run_single_threaded(initial_states, x86_64, scoring_function=None):
             yield v
 
 
-def run_threaded(initial_states, x86_64, scoring_function=None):
+def run_threaded(initial_states, x86_64, scoring_function=None, culling_function=None):
     global active_threads
     global available_states
 
@@ -77,6 +81,10 @@ def run_threaded(initial_states, x86_64, scoring_function=None):
                     s = states.pop()
                     ns = emulator.single_step(s, x86_64)
                     for n in ns:
+                        if culling_function is not None:
+                            if culling_function(n):
+                                continue
+
                         if scoring_function is not None:
                             n.score = scoring_function(n)
                             states.append(n)

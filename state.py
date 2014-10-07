@@ -161,17 +161,31 @@ class State(object):
                 }]
             self.trace = []
 
+    def __getstate__(self):
+        l = None
+        try:
+            l = self.log
+            self.log = None
+            return dict(self.__dict__)
+        finally:
+            self.log = l
+
+    def __setstate__(self, d):
+        self.__dict__ = d
+        self.log = log.StateLogger(self)
+
     def clear_il_state(self):
         self.registers.clear_il_state()
         self.il_index = 0
 
     def fork(self):
         new = State(self)
-        if self.id == 0:
-            new.id = State._state_id.increment()
-        else:
-            new.id = self.id
-            self.id = 0
+        #if self.id == 0:
+        new.id = State._state_id.increment()
+        self.log.fork(new.id)
+        #else:
+        #    new.id = self.id
+        #    self.id = 0
 
         return new
 
@@ -227,7 +241,7 @@ class State(object):
                         self.memory.read_byte(self, a.value + i),
                         byte))
         else:
-            for i, byte in enumerate(bytes):
+            for i, byte in enumerate(bs):
                 self.memory.write_byte(self, as_[0].value + i, byte)
 
     def branch(self, address):

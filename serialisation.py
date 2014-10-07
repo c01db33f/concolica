@@ -17,14 +17,16 @@
 import cPickle as pickle
 import zlib
 
-def save(file, item):
+
+def save(path, item):
     data = pickle.dumps(item, pickle.HIGHEST_PROTOCOL)
     data = zlib.compress(data)
-    with open(file, 'wb') as tmp:
+    with open(path, 'wb') as tmp:
         tmp.write(data)
 
-def load(file):
-    with open(file, 'rb') as tmp:
+
+def load(path):
+    with open(path, 'rb') as tmp:
         data = tmp.read()
         data = zlib.decompress(data)
         item = pickle.loads(data)

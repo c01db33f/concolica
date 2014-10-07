@@ -140,7 +140,6 @@ class VdbX86_64Process(VdbProcess):
     def __init__(self, trace):
         VdbProcess.__init__(self, trace)
 
-
     def _get_fsbase(self):
         sp = self._t.getStackCounter()
         pc = self._t.getProgramCounter()
@@ -170,7 +169,6 @@ class VdbX86_64Process(VdbProcess):
             self._t.writeMemory(sp, spsave)
             self._t.writeMemory(pc, pcsave)
             self._t.setRegisters(regsave)
-
 
     def _get_gsbase(self):
         sp = self._t.getStackCounter()
@@ -202,13 +200,13 @@ class VdbX86_64Process(VdbProcess):
             self._t.writeMemory(pc, pcsave)
             self._t.setRegisters(regsave)
 
-
     def _load_registers(self, state):
         context = self._t.getRegisterContext(self._t.getCurrentThread())
 
         state.ip = context.getProgramCounter()
 
-        for reg in ['rax', 'rbx', 'rcx', 'rdx', 'rsi', 'rdi', 'rbp', 'rsp', 'r8', 'r9', 'r10', 'r11', 'r12', 'r13', 'r14', 'r15']:
+        for reg in ['rax', 'rbx', 'rcx', 'rdx', 'rsi', 'rdi', 'rbp', 'rsp', 'r8', 'r9',
+                    'r10', 'r11', 'r12', 'r13', 'r14', 'r15']:
             state.registers[reg] = bv.Constant(64, context.getRegisterByName(reg))
 
         for reg in ['cf', 'pf', 'af', 'zf', 'sf', 'df', 'of']:
@@ -216,8 +214,11 @@ class VdbX86_64Process(VdbProcess):
 
         # vdb doesn't appear to read xmm registers
 
-        for reg in ['xmm0', 'xmm1', 'xmm2', 'xmm3', 'xmm4', 'xmm5', 'xmm6', 'xmm7', 'xmm8', 'xmm9', 'xmm10', 'xmm11', 'xmm12', 'xmm13', 'xmm14', 'xmm15']:
-            state.registers[reg] = bv.Constant(128, context.getRegisterByName('x' + reg[1:]) & 0xffffffffffffffffffffffffffffffff)
+        for reg in ['xmm0', 'xmm1', 'xmm2', 'xmm3', 'xmm4', 'xmm5', 'xmm6', 'xmm7', 'xmm8',
+                    'xmm9', 'xmm10', 'xmm11', 'xmm12', 'xmm13', 'xmm14', 'xmm15']:
+            state.registers[reg] = \
+                bv.Constant(128,
+                            context.getRegisterByName('x' + reg[1:]) & 0xffffffffffffffffffffffffffffffff)
 
         state.registers['fsbase'] = bv.Constant(64, self._get_fsbase())
         state.registers['gsbase'] = bv.Constant(64, self._get_gsbase())
@@ -225,7 +226,7 @@ class VdbX86_64Process(VdbProcess):
 
 def get_state(program, breakpoint, x86_64=False):
 
-    state = None
+    s = None
     trace = vtrace.getTrace()
 
     print '[*] starting process'
@@ -238,18 +239,18 @@ def get_state(program, breakpoint, x86_64=False):
             vtrace.Breakpoint.__init__(self, breakpoint)
 
         def notify(self, event, trace):
-            print '[*] asdf'
             if x86_64:
                 p = VdbX86_64Process(trace)
             else:
                 p = VdbX86Process(trace)
 
             print '[*] reached breakpoint, dumping state'
-            state = p.state()
+            s = p.state()
 
             while True:
                 pass
 
+            # yay exceptions for control flow
             raise ValueError()
 
     trace.addBreakpoint(Tracepoint())
@@ -261,5 +262,5 @@ def get_state(program, breakpoint, x86_64=False):
     except ValueError:
         trace.kill()
 
-    return state
+    return s
 

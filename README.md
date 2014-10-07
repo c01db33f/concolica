@@ -48,7 +48,7 @@ cd ../../`
 Then add the following to your .bash_aliases
 
 `export PYTHONPATH=$PYTHONPATH:/path/to/concolica/smt/and/reil
-export VDB_EXT_DIR=/path/to/conolica/vdb`
+export VDB_EXT_PATH=/path/to/conolica/vdb`
 
 
 Usage
