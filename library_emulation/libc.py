@@ -581,6 +581,9 @@ def memset(s, cc):
     val = f.params[1].resize(8)
     count = f.params[2]
 
+    if dst.symbolic:
+        raise NotImplemented()
+
     counts = []
     if count.symbolic:
         min_count = minimum(s, count)
@@ -624,9 +627,11 @@ def memset(s, cc):
 
         s_.log.function_call(f, 'memset(dst={}, val={}, count={:x})', dst, val, count_)
 
-        output = OutputBuffer(s_, dst)
-        for i in xrange(0, count_):
-            output.append(val)
+        s_.memory.bulk_set(s_, dst.value, count_, val)
+
+        #output = OutputBuffer(s_, dst)
+        #for i in xrange(0, count_):
+        #    output.append(val)
 
         f_ = cc(s_)
         ss += f_.ret(value=dst)

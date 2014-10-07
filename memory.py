@@ -15,6 +15,11 @@
 #    limitations under the License.
 
 
+from rbtree import rbtree
+
+a = rbtree()
+print dir(a)
+
 from smt import bitvector as bv
 from smt import boolean as bl
 
@@ -74,10 +79,11 @@ class DynamicMemory(object):
     memory written to during emulation.
     """
 
-    __slots__ = ('_cache', '_parent', '_heap_next', '_heap_blocks', '_heap_free')
+    __slots__ = ('_bulk_set', '_cache', '_parent', '_heap_next', '_heap_blocks', '_heap_free')
 
     def __init__(self, parent):
-        self._cache = dict()
+        self._bulk_set = []
+        self._cache = rbtree()
         self._parent = parent
 
         if isinstance(parent, StaticMemory):
@@ -97,10 +103,10 @@ class DynamicMemory(object):
 
     def __getstate__(self):
         self.flatten()
-        return self._cache, self._parent, self._heap_next, self._heap_blocks, self._heap_free
+        return dict(self._cache), self._parent, self._heap_next, self._heap_blocks, self._heap_free
 
     def __setstate__(self, d):
-        self._cache = d[0]
+        self._cache = rbtree(d[0])
         self._parent = d[1]
         self._heap_next = d[2]
         self._heap_blocks = d[3]
@@ -133,6 +139,25 @@ class DynamicMemory(object):
 
         self.free(state, ptr)
         return new_ptr
+
+    def bulk_set(self, state, ptr, count, value):
+        # don't bother for small blocks
+        if count < 128:
+            for i in xrange(ptr, ptr + count):
+                self.write_byte(state, ptr, value)
+        else:
+            # perfunctory check; anything else is too slow
+            if not self.is_mapped(state, ptr):
+                raise InvalidWrite(state, ptr, value)
+            if not self.is_mapped(state, ptr + count):
+                raise InvalidWrite(state, ptr + count, value)
+            
+            # clear any local cache values
+            tmp = self._cache[:ptr]
+            self._cache = self._cache[ptr + count:]
+            self._cache.update(tmp)
+
+            self._bulk_set.append((ptr, ptr + count, value))
 
     def depth(self):
         d = 0
@@ -173,6 +198,12 @@ class DynamicMemory(object):
         try:
             return self._cache[address]
         except KeyError:
+
+            # check if it's been memset
+            for base, limit, value in self._bulk_set:
+                if base <= address <= limit:
+                    return value
+
             return self._parent.read_byte(state, address)
 
     def write_byte(self, state, address, value):
