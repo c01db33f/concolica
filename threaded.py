@@ -112,6 +112,7 @@ def run_threaded(initial_states, x86_64, scoring_function=None, culling_function
                             data += '#'
 
                     print colored(data, 'white', 'on_red', attrs=['bold'])
+                    print data.encode('hex')
                     with open('font_{}.ttf'.format(v.state.id), 'wb') as tmp:
                         tmp.write(data)
 

@@ -229,7 +229,7 @@ def sys_mmap(s, cc):
     if length.symbolic:
         raise NotImplementedError()
 
-    ptr = bv.Constant(addr.size, s.memory.allocate(length))
+    ptr = bv.Constant(addr.size, s.memory.allocate(s, length.value))
 
     return f.ret(value=ptr)
 
@@ -247,7 +247,10 @@ def sys_mmap_pgoff(s, cc):
     s.log.syscall(f, 'sys_mmap_pgoff(file={}, addr={}, length={}, prot={}, flags={}, offset={})',
                   addr, length, prot, flags, fd, offset)
 
-    ptr = bv.Constant(addr.size, s.memory.allocate(length))
+    if length.symbolic:
+        raise NotImplementedError()
+
+    ptr = bv.Constant(addr.size, s.memory.allocate(s, length.value))
 
     return f.ret(value=ptr)
 

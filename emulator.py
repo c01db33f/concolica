@@ -21,6 +21,8 @@ import reil.x86.translator as x86
 from concolica.utils import *
 from concolica.vulnerabilities import *
 
+from smt import bitvector as bv
+
 
 def operand_value(s, o):
     output = o
@@ -359,6 +361,23 @@ def op_ashr(i, s):
     return [s]
 
 
+def op_sdiv(i, s):
+    a = operand_value(s, i.input0)
+    b = operand_value(s, i.input1)
+    dst = i.output
+
+    operation_size = max(a.size, b.size, dst.size)
+
+    a = a.resize(operation_size)
+    b = b.resize(operation_size)
+
+    result = bv.BinaryOperation(a, bv.BinaryOperator.SignedDivide, b)
+    result = result.resize(dst.size)
+
+    s.registers[dst.name] = result
+    return [s]
+
+
 def op_sex(i, s):
     a = operand_value(s, i.input0)
     dst = i.output
@@ -396,6 +415,7 @@ opcode_map = {
     reil.LSHL:  op_lshl,
     reil.LSHR:  op_lshr,
     reil.ASHR:  op_ashr,
+    reil.SDIV:  op_sdiv,
     reil.SEX:   op_sex,
     reil.SYS:   op_sys,
 }
@@ -442,6 +462,9 @@ def single_step(s, x86_64=False):
     i = fetch_instruction(s, x86_64)
     if i is None:
         return []
+
+    #if i.address == 0x400a78:
+    #    raise InvalidWrite(s, 0xc01db33f, 0xc01db33f)
 
     # yes, this is not thread-safe. it should only be used for something like
     # selecting best path though, so it doesn't really matter/is fuzzy anyway.

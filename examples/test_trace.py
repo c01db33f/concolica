@@ -16,7 +16,7 @@ logger = logging.getLogger('concolica')
 logger.setLevel(logging.INFO)
 
 ch = logging.StreamHandler()
-ch.setLevel(log.REIL_REGISTERS)
+ch.setLevel(log.REIL_INSTRUCTION)
 ch.setFormatter(log.Formatter('%(message)s'))
 logger.addHandler(ch)
 
@@ -161,7 +161,7 @@ if __name__ == '__main__':
         assert len(states) == 1
         if not validate(s, trace_data['trace'][i], x86_64):
             print 'VALIDATION FAILED SHIT SHIT SHIT SHIT'
-            if s.ip != 0x7f52036ca145:
+            if s.ip not in [0x7f52036ca145, 0x7ffff7b3756d]:
                 import sys
                 sys.exit(0)
 

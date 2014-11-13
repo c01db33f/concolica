@@ -21,6 +21,7 @@ from smt import boolean as bl
 from smt import bitvector as bv
 
 from concolica.utils import *
+from concolica.vulnerabilities import *
 
 
 # err.h
@@ -354,6 +355,10 @@ def malloc(s, cc):
     else:
         sizes.append(size.value)
 
+    # TODO: decide if this is worthwhile
+    # insert malloc failure
+    sizes.append(None)
+
     ss = []
     total_sizes = len(sizes)
     while len(sizes) > 0:
@@ -364,10 +369,15 @@ def malloc(s, cc):
         else:
             s_ = s
 
-        s_.solver.add(size == bv.Constant(size.size, size_))
-        ptr = s_.memory.allocate(s_, size_)
+        if size_ is None:
+            ptr = 0
 
-        s_.log.function_call(f, 'malloc(size={:x}) [{:x}]', size_, ptr)
+            s_.log.function_call(f, 'malloc(<FAIL>) [NULL]')
+        else:
+            s_.solver.add(size == bv.Constant(size.size, size_))
+            ptr = s_.memory.allocate(s_, size_)
+
+            s_.log.function_call(f, 'malloc(size={:x}) [{:x}]', size_, ptr)
 
         f_ = cc(s_)
         ss += f_.ret(value=ptr)
@@ -582,7 +592,8 @@ def memset(s, cc):
     count = f.params[2]
 
     if dst.symbolic:
-        raise NotImplemented()
+        if arbitrary(s, dst):
+            raise ArbitraryWrite(s, dst, val)
 
     counts = []
     if count.symbolic:
@@ -608,30 +619,9 @@ def memset(s, cc):
 
         s_.solver.add(count == bv.Constant(count.size, count_))
 
-        print '{}'.format(count._smt2())
-
-        if count_ == 0x2000000000000020:
-            m = s_.solver.model()
-            data = ''
-            for i in range(0, 0x4000):
-                name = 'ttf_{:x}'.format(i)
-                if name in m:
-                    data += chr(m[name].value)
-                else:
-                    data += '#'
-
-            print colored(data, 'white', 'on_red', attrs=['bold'])
-            with open('font_{}_xx.ttf'.format(s_.id), 'wb') as tmp:
-                tmp.write(data)
-
-
         s_.log.function_call(f, 'memset(dst={}, val={}, count={:x})', dst, val, count_)
 
         s_.memory.bulk_set(s_, dst.value, count_, val)
-
-        #output = OutputBuffer(s_, dst)
-        #for i in xrange(0, count_):
-        #    output.append(val)
 
         f_ = cc(s_)
         ss += f_.ret(value=dst)

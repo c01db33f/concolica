@@ -97,6 +97,16 @@ class UnmappedRead(InvalidRead):
             self.state.id, self.state.ip, self.address)
 
 
+class UseAfterFree(InvalidRead):
+
+    def __init__(self, state, address):
+        InvalidRead.__init__(self, state, address)
+
+    def __str__(self):
+        return '{} {:x} use-after-free: {:x}'.format(
+            self.state.id, self.state.ip, self.address)
+
+
 class ArbitraryRead(InvalidRead):
     
     def __init__(self, state, address):

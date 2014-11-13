@@ -17,8 +17,6 @@
 
 from rbtree import rbtree
 
-a = rbtree()
-print dir(a)
 
 from smt import bitvector as bv
 from smt import boolean as bl
@@ -87,7 +85,7 @@ class DynamicMemory(object):
         self._parent = parent
 
         if isinstance(parent, StaticMemory):
-            self._heap_next = 0x80000000
+            self._heap_next = 0x00007ffff7f93000#0x80000000
             self._heap_blocks = dict()
             self._heap_free = dict()
         else:
@@ -125,9 +123,12 @@ class DynamicMemory(object):
 
     def free(self, state, ptr):
         size = self._heap_blocks[ptr]
-        for i in range(0, size):
-            byte = bv.Symbol(8, 'free_{:x}_{:x}'.format(ptr, i))
-            self.write_byte(state, ptr + i, byte)
+
+        # clear any local cache values
+        tmp = self._cache[:ptr]
+        self._cache = self._cache[ptr + size:]
+        self._cache.update(tmp)
+
         self._heap_free[ptr] = size
         del self._heap_blocks[ptr]
 
@@ -149,15 +150,15 @@ class DynamicMemory(object):
             # perfunctory check; anything else is too slow
             if not self.is_mapped(state, ptr):
                 raise InvalidWrite(state, ptr, value)
-            if not self.is_mapped(state, ptr + count):
-                raise InvalidWrite(state, ptr + count, value)
-            
+            if not self.is_mapped(state, ptr + count - 1):
+                raise InvalidWrite(state, ptr + count - 1, value)
+
             # clear any local cache values
             tmp = self._cache[:ptr]
             self._cache = self._cache[ptr + count:]
             self._cache.update(tmp)
 
-            self._bulk_set.append((ptr, ptr + count, value))
+            self._bulk_set.append((ptr, ptr + count - 1, value))
 
     def depth(self):
         d = 0
@@ -198,6 +199,11 @@ class DynamicMemory(object):
         try:
             return self._cache[address]
         except KeyError:
+
+            # check if it's been freed
+            for block in self._heap_free:
+                if block <= address < block + self._heap_free[block]:
+                    raise UseAfterFree(state, address)
 
             # check if it's been memset
             for base, limit, value in self._bulk_set:
